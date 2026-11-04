@@ -1,0 +1,127 @@
+// Prisma Schema for Postmint Social Studio
+// Multi-Platform Social Connect & Automated Publishing
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  youtube
+  facebook
+  instagram
+  snapchat
+  sharechat
+}
+
+enum AccountStatus {
+  active
+  expired
+  revoked
+}
+
+enum MediaType {
+  video
+  image
+}
+
+enum PostStatus {
+  draft
+  queued
+  publishing
+  published
+  failed
+}
+
+enum TargetStatus {
+  pending
+  success
+  failed
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  name           String?
+  avatarUrl      String?         @map("avatar_url")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  socialAccounts SocialAccount[]
+  posts          Post[]
+
+  @@map("users")
+}
+
+model SocialAccount {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  platform        Platform
+  externalId      String        @map("external_id")
+  displayName     String        @map("display_name")
+  avatarUrl       String?       @map("avatar_url")
+  
+  // AES-256-GCM encrypted tokens (iv:authTag:ciphertext)
+  accessTokenEnc  String        @map("access_token_enc")
+  refreshTokenEnc String?       @map("refresh_token_enc")
+  expiresAt       DateTime?     @map("expires_at")
+  scopes          String[]      @default([])
+  status          AccountStatus @default(active)
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postTargets     PostTarget[]
+
+  @@unique([userId, platform, externalId])
+  @@index([userId])
+  @@index([platform, status])
+  @@map("social_accounts")
+}
+
+model Post {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  title       String
+  description String?
+  mediaUrl    String       @map("media_url")
+  mediaType   MediaType    @default(video) @map("media_type")
+  scheduledAt DateTime?    @map("scheduled_at")
+  status      PostStatus   @default(draft)
+
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targets     PostTarget[]
+
+  @@index([userId, status])
+  @@index([scheduledAt, status])
+  @@map("posts")
+}
+
+model PostTarget {
+  id              String        @id @default(uuid())
+  postId          String        @map("post_id")
+  socialAccountId String        @map("social_account_id")
+  platformPostId  String?       @map("platform_post_id")
+  status          TargetStatus  @default(pending)
+  errorMessage    String?       @map("error_message")
+  publishedAt     DateTime?     @map("published_at")
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([socialAccountId])
+  @@index([status])
+  @@map("post_targets")
+}

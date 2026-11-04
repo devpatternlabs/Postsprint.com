@@ -1,0 +1,11 @@
+server.js
+auto-configure-social.js
+auto
+auto/**
+node_modules
+*.bat
+screen_*.png
+.git
+.gemini
+api-legacy-archive
+api-legacy-archive/**

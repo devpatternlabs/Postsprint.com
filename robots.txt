@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app.html
+Disallow: /login.html
+Disallow: /signup.html
+Disallow: /create-post.html
+Disallow: /calendar.html
+Disallow: /analytics.html
+Disallow: /media-library.html
+Disallow: /inbox.html
+Disallow: /settings.html
+Disallow: /connected-accounts.html
+Disallow: /ai-assistant.html
+Disallow: /admin
+
+Sitemap: https://postsprint.devpatternlabs.com/sitemap.xml

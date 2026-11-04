@@ -1,0 +1,155 @@
+{
+  "version": 2,
+  "framework": null,
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "functions": {
+    "api/social.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/auth.js": {
+      "maxDuration": 30
+    },
+    "api/oauth.js": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)\\.(jpg|jpeg|png|webp|avif|ico|svg|css|js)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/robots.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=86400"
+        }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=86400"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/api/admin/(.*)", "destination": "/api/admin?subpath=$1" },
+    { "source": "/api/admin", "destination": "/api/admin" },
+    { "source": "/api/coupons/(.*)", "destination": "/api/coupons?subpath=$1" },
+    { "source": "/api/coupons", "destination": "/api/coupons" },
+    { "source": "/api/subscriptions/(.*)", "destination": "/api/subscriptions?subpath=$1" },
+    { "source": "/api/subscriptions", "destination": "/api/subscriptions" },
+    { "source": "/api/usage/(.*)", "destination": "/api/subscriptions?subpath=$1" },
+    { "source": "/api/usage", "destination": "/api/subscriptions?subpath=increment-upload" },
+    { "source": "/api/cron/(.*)", "destination": "/api/cron?subpath=$1" },
+    { "source": "/api/cron", "destination": "/api/cron" },
+    { "source": "/api/social/(.*)", "destination": "/api/social?subpath=$1" },
+    { "source": "/api/social", "destination": "/api/social" },
+    { "source": "/api/auth/(.*)", "destination": "/api/auth?subpath=$1" },
+    { "source": "/api/auth", "destination": "/api/auth" },
+    { "source": "/api/oauth/(.*)", "destination": "/api/oauth?subpath=$1" },
+    { "source": "/api/oauth", "destination": "/api/oauth" },
+    { "source": "/api/credentials/(.*)", "destination": "/api/credentials?subpath=$1" },
+    { "source": "/api/credentials", "destination": "/api/credentials" },
+    { "source": "/api/notifications/(.*)", "destination": "/api/notifications?subpath=$1" },
+    { "source": "/api/notifications", "destination": "/api/notifications" },
+    { "source": "/api/site/(.*)", "destination": "/api/site?subpath=$1" },
+    { "source": "/api/site", "destination": "/api/site" },
+    { "source": "/api/chat", "destination": "/api/chat" },
+    { "source": "/login", "destination": "/" },
+    { "source": "/signin", "destination": "/" },
+    { "source": "/signup", "destination": "/" },
+    { "source": "/get-started", "destination": "/" },
+    { "source": "/dashboard", "destination": "/" },
+    { "source": "/admin", "destination": "/" },
+    { "source": "/portfolio", "destination": "/" },
+    { "source": "/reviews", "destination": "/" },
+    { "source": "/billing", "destination": "/" },
+    { "source": "/connected-accounts", "destination": "/" },
+    { "source": "/accounts", "destination": "/" },
+    { "source": "/create", "destination": "/" },
+    { "source": "/ai", "destination": "/" },
+    { "source": "/calendar", "destination": "/" },
+    { "source": "/media", "destination": "/" },
+    { "source": "/settings", "destination": "/" },
+    { "source": "/analytics", "destination": "/" },
+    { "source": "/chats", "destination": "/" },
+    { "source": "/social-config", "destination": "/" },
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/pricing", "destination": "/pricing.html" },
+    { "source": "/features", "destination": "/features.html" },
+    { "source": "/use-cases", "destination": "/use-cases.html" },
+    { "source": "/safety", "destination": "/safety.html" },
+    { "source": "/blog", "destination": "/blog.html" },
+    { "source": "/blog-content-calendar", "destination": "/blog-content-calendar.html" },
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/help", "destination": "/help.html" },
+    { "source": "/security", "destination": "/security.html" },
+    { "source": "/account-safety", "destination": "/account-safety.html" },
+    { "source": "/data-deletion", "destination": "/data-deletion.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/google8rtMVc1PTmlJC-CYTMskQ-gWdZTcJM8bccZixGaS0Lk", "destination": "/google8rtMVc1PTmlJC-CYTMskQ-gWdZTcJM8bccZixGaS0Lk.html" },
+    { "source": "/google-site-verification=8rtMVc1PTmlJC-CYTMskQ-gWdZTcJM8bccZixGaS0Lk", "destination": "/google8rtMVc1PTmlJC-CYTMskQ-gWdZTcJM8bccZixGaS0Lk.html" },
+    { "source": "/google5cdf2c3225b497ac", "destination": "/google5cdf2c3225b497ac.html" }
+  ]
+}

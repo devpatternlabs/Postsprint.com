@@ -1,0 +1,16 @@
+{
+  "name": "postmint",
+  "version": "1.0.0",
+  "description": "Postmint Social Studio",
+  "scripts": {
+    "start": "node server.js",
+    "config:social": "node auto-configure-social.js",
+    "social:status": "node auto-configure-social.js --status",
+    "social:mock": "node auto-configure-social.js --mock",
+    "social:validate": "node auto-configure-social.js --validate",
+    "social:export": "node auto-configure-social.js --export"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
+  }
+}

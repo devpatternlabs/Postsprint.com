@@ -1,0 +1,138 @@
+{
+  "users": [
+    {
+      "id": "usr_admin_harizz",
+      "email": "explorewithharizz@gmail.com",
+      "email_normalized": "explorewithharizz@gmail.com",
+      "name": "Harizz (Admin)",
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Harizz&backgroundColor=2563eb",
+      "auth_provider": "google",
+      "role": "admin",
+      "created_at": "2026-10-15T07:35:49.865Z",
+      "updated_at": "2026-10-15T07:35:49.866Z",
+      "last_login": "2026-10-15T07:35:49.866Z",
+      "onboarding_completed": true,
+      "account_status": "active",
+      "status": "active",
+      "signup_logged": true
+    }
+  ],
+  "socialAccounts": [],
+  "posts": [],
+  "postTargets": [],
+  "notifications": [
+    {
+      "id": "notif_c775bc867174",
+      "announcement_id": "ann_3cff61c6e2bd",
+      "userId": "all",
+      "title": "Postsprint: New Connection Update",
+      "message": "Postsprint: Hi users, we will update new connection like Instagram, Facebook, and YouTube! Connect your accounts now.",
+      "type": "announcement",
+      "cta_label": "Connect Now",
+      "cta_url": "#accounts",
+      "read": false,
+      "read_by": [],
+      "createdAt": "2026-10-16T08:09:46.554Z"
+    }
+  ],
+  "sessions": [],
+  "comments": [],
+  "conversations": [],
+  "subscriptions": [],
+  "usage": [],
+  "coupons": [
+    {
+      "id": "cpn_code_welcome",
+      "code": "CODE",
+      "discount_type": "free",
+      "discount_value": 100,
+      "valid_from": "2026-10-01T00:00:00.000Z",
+      "valid_until": "2028-12-31T23:59:59.000Z",
+      "max_uses": null,
+      "uses_count": 0,
+      "uses_per_user": 1,
+      "applicable_plan": "creator_pro",
+      "premium_duration_days": 14,
+      "active": true,
+      "created_at": "2026-10-05T14:50:16.471Z"
+    },
+    {
+      "id": "cpn_harizz_welcome",
+      "code": "HARIZZ",
+      "discount_type": "free",
+      "discount_value": 100,
+      "valid_from": "2026-10-01T00:00:00.000Z",
+      "valid_until": "2028-12-31T23:59:59.000Z",
+      "max_uses": null,
+      "uses_count": 0,
+      "uses_per_user": 1,
+      "applicable_plan": "creator_pro",
+      "premium_duration_days": 14,
+      "active": true,
+      "created_at": "2026-10-05T14:50:16.471Z"
+    },
+    {
+      "id": "cpn_harizz20",
+      "code": "HARIZZ20",
+      "discount_type": "percentage",
+      "discount_value": 20,
+      "valid_from": "2026-10-01T00:00:00.000Z",
+      "valid_until": "2027-12-31T23:59:59.000Z",
+      "max_uses": 500,
+      "uses_count": 0,
+      "uses_per_user": 1,
+      "applicable_plan": "all",
+      "premium_duration_days": 0,
+      "active": true,
+      "created_at": "2026-10-15T07:35:49.866Z"
+    }
+  ],
+  "coupon_redemptions": [],
+  "free_members": [],
+  "otp_codes": [],
+  "activity_logs": [],
+  "payments": [],
+  "logged_emails": [
+    "explorewithharizz@gmail.com"
+  ],
+  "announcements": [
+    {
+      "id": "ann_3cff61c6e2bd",
+      "title": "New Connection Update",
+      "message": "Postsprint: Hi users, we will update new connection like Instagram, Facebook, and YouTube! Connect your accounts now.",
+      "cta_label": "Connect Now",
+      "cta_url": "#accounts",
+      "created_by": "explorewithharizz@gmail.com",
+      "created_at": "2026-10-16T08:09:46.554Z"
+    }
+  ],
+  "contact_inquiries": [
+    {
+      "id": "inq_1792082072772_8r2wxb",
+      "name": "Haris",
+      "email": "haris@example.com",
+      "gmail": "haris@example.com",
+      "message": "Hello PostSprint",
+      "ip": "::1",
+      "created_at": "2026-10-15T16:34:32.772Z"
+    },
+    {
+      "id": "inq_1792080965702_h8ov60",
+      "name": "Test User",
+      "email": "test@example.com",
+      "gmail": "test@example.com",
+      "message": "Hello from PostSprint contact form!",
+      "ip": "::1",
+      "created_at": "2026-10-15T16:16:05.703Z"
+    }
+  ],
+  "music_tracks": [],
+  "deletedPostIds": [
+    "p_non_existent_test_id",
+    "624960a7-2f03-4840-a4fd-d112818c16a9"
+  ],
+  "disconnectedPlatforms": {
+    "usr_5026148c1524ef77_youtube": 1793348182690,
+    "usr_default_postmint_youtube": 1793348182690
+  }
+}

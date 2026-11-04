@@ -1,0 +1,34 @@
+{
+  "_info": "PostSprint Social Media Accounts & Connected Site Configuration",
+  "generatedAt": "2026-09-30T08:45:00.000Z",
+  "mockMode": false,
+  "platforms": {
+    "meta": {
+      "platformName": "Instagram & Facebook",
+      "appId": "2680197525765699",
+      "appSecretConfigured": true,
+      "redirectUri": "http://localhost:3001/api/oauth/meta/callback"
+    },
+    "youtube": {
+      "platformName": "YouTube Data API v3",
+      "clientId": "",
+      "clientSecretConfigured": true,
+      "redirectUri": "http://localhost:3001/api/auth/youtube/callback"
+    },
+    "snapchat": {
+      "platformName": "Snapchat Creative Kit",
+      "clientId": null,
+      "redirectUri": "http://localhost:3001/api/auth/snapchat/callback"
+    },
+    "sharechat": {
+      "platformName": "ShareChat Partner API",
+      "partnerTokenConfigured": false
+    }
+  },
+  "connectedSite": {
+    "name": "PostSprint Social Studio",
+    "url": "http://localhost:3001",
+    "webhook": "http://localhost:3001/api/chat",
+    "token": "pm_live_sec_99482"
+  }
+}

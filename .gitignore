@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js & Vercel builds
+.next/
+**/.next/
+.vercel/
+**/.vercel/
+
+# Environment and secrets
+.env*
+*.env
+
+scratch/

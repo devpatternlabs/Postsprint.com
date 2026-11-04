@@ -1,0 +1,237 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --background-secondary: #ffffff;
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
+  --surface: #ffffff;
+  --surface-card: #ffffff;
+  --surface-border: #e2e8f0;
+  --surface-hover: #f1f5f9;
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --sidebar-bg: #ffffff;
+}
+
+.dark {
+  --background: #090a0f;
+  --background-secondary: #0d0f17;
+  --foreground: #f3f4f6;
+  --foreground-muted: #9ca3af;
+  --surface: #11131a;
+  --surface-card: #11131a;
+  --surface-border: #1e2230;
+  --surface-hover: #181b26;
+  --header-bg: rgba(13, 15, 23, 0.85);
+  --sidebar-bg: #0d0f17;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-hover);
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(17, 19, 26, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-card {
+  background: #11131a;
+  border: 1px solid #1e2230;
+}
+
+/* Light mode utility mappings for existing hardcoded dark palette classes */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) .bg-\[\#090A0F\],
+html:not(.dark) .bg-\[\#090a0f\] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-\[\#0D0F17\],
+html:not(.dark) .bg-\[\#0d0f17\] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-\[\#0D0F17\]\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html:not(.dark) .bg-\[\#0A0C13\],
+html:not(.dark) .bg-\[\#0a0c13\] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-\[\#11131A\],
+html:not(.dark) .bg-\[\#11131a\] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-\[\#141722\],
+html:not(.dark) .bg-\[\#141620\],
+html:not(.dark) .bg-\[\#141724\],
+html:not(.dark) .bg-\[\#151824\],
+html:not(.dark) .bg-\[\#181B26\],
+html:not(.dark) .hover\:bg-\[\#151824\]:hover,
+html:not(.dark) .hover\:bg-\[\#181B26\]:hover {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .border-\[\#1E2230\],
+html:not(.dark) .border-\[\#1e2230\],
+html:not(.dark) .border-\[\#272D40\],
+html:not(.dark) .border-\[\#272d40\],
+html:not(.dark) .border-\[\#2A3045\],
+html:not(.dark) .border-\[\#2a3045\] {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .border-\[\#1E2230\]\/60,
+html:not(.dark) .border-\[\#1E2230\]\/40,
+html:not(.dark) .border-\[\#1E2230\]\/80 {
+  border-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+/* Glass cards and panels in light mode */
+html:not(.dark) .glass-panel {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .glass-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Text contrast adjustments in light mode */
+html:not(.dark) h1.text-white,
+html:not(.dark) h2.text-white,
+html:not(.dark) h3.text-white,
+html:not(.dark) h4.text-white,
+html:not(.dark) h5.text-white,
+html:not(.dark) h6.text-white,
+html:not(.dark) p.text-white,
+html:not(.dark) label.text-white,
+html:not(.dark) div.text-white:not(.bg-indigo-600 *):not(.bg-gradient-to-r *):not([class*="bg-red"] *):not([class*="bg-blue"] *):not([class*="bg-pink"] *),
+html:not(.dark) span.text-white:not(.bg-indigo-600 *):not(.bg-gradient-to-tr *):not(.bg-gradient-to-r *):not([class*="bg-red"] *):not([class*="bg-green"] *):not([class*="bg-blue"] *):not([class*="bg-amber"] *):not([class*="bg-violet"] *) {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-gray-100:not(.bg-indigo-600 *):not(.bg-gradient-to-tr *):not(.bg-gradient-to-r *) {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-gray-200:not(.bg-indigo-600 *):not(.bg-gradient-to-tr *):not(.bg-gradient-to-r *) {
+  color: #1e293b !important;
+}
+
+html:not(.dark) .text-gray-300:not(.bg-indigo-600 *):not(.bg-gradient-to-tr *):not(.bg-gradient-to-r *) {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-gray-400:not(.bg-indigo-600 *):not(.bg-gradient-to-tr *):not(.bg-gradient-to-r *) {
+  color: #475569 !important;
+}
+
+/* Platform-specific brand accents with high contrast in both themes */
+.platform-pill-youtube {
+  color: #dc2626 !important;
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.dark .platform-pill-youtube {
+  color: #f87171 !important;
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+.platform-pill-facebook {
+  color: #2563eb !important;
+  background-color: rgba(37, 99, 235, 0.12) !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+}
+.dark .platform-pill-facebook {
+  color: #60a5fa !important;
+  background-color: rgba(37, 99, 235, 0.15) !important;
+  border-color: rgba(37, 99, 235, 0.4) !important;
+}
+
+.platform-pill-instagram {
+  color: #db2777 !important;
+  background-color: rgba(219, 39, 119, 0.12) !important;
+  border-color: rgba(219, 39, 119, 0.3) !important;
+}
+.dark .platform-pill-instagram {
+  color: #f472b6 !important;
+  background-color: rgba(219, 39, 119, 0.15) !important;
+  border-color: rgba(219, 39, 119, 0.4) !important;
+}
+
+.platform-pill-snapchat {
+  color: #d97706 !important;
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+.dark .platform-pill-snapchat {
+  color: #fbbf24 !important;
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+.platform-pill-sharechat {
+  color: #0d9488 !important;
+  background-color: rgba(20, 184, 166, 0.12) !important;
+  border-color: rgba(20, 184, 166, 0.3) !important;
+}
+.dark .platform-pill-sharechat {
+  color: #2dd4bf !important;
+  background-color: rgba(20, 184, 166, 0.15) !important;
+  border-color: rgba(20, 184, 166, 0.4) !important;
+}
+
+/* Light mode form input styling */
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html:not(.dark) textarea,
+html:not(.dark) select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
