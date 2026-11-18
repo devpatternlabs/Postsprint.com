@@ -25,7 +25,7 @@ async function handler(req, res) {
     return res.status(403).json({
       success: false,
       error: 'forbidden',
-      message: 'Access Denied. Only the administrator (explorewithharizz@gmail.com) can access this resource.'
+      message: `Access Denied. Only the administrator (${ADMIN_EMAIL}) can access this resource.`
     });
   }
 

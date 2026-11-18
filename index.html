@@ -3450,7 +3450,7 @@ Here's to creating with more joy and a little less overthinking. #PostSprint</te
 
       <!-- Account suspension banner -->
       <div id="suspendedNoticeBanner" style="display:none;background:#fef2f2;border-bottom:2px solid #ef4444;color:#991b1b;padding:11px 20px;text-align:center;font-size:13.5px;font-weight:600;align-items:center;justify-content:center;gap:12px;z-index:9999;">
-        <span>⛔</span> Your account has been suspended by the administrator. Uploading, scheduling, and publishing are temporarily disabled. Please contact explorewithharizz@gmail.com for assistance.
+        <span>⛔</span> Your account has been suspended by the administrator. Uploading, scheduling, and publishing are temporarily disabled. Please contact devpatternlabs@gmail.com for assistance.
       </div>
 
       <!-- Limit reached / Top upgrade banner -->
@@ -3594,14 +3594,14 @@ try {
 
 function isCurrentUserAdmin(user = currentUser) {
   if (!user || !user.email) return false;
-  return user.email.trim().toLowerCase() === 'explorewithharizz@gmail.com';
+  return user.role === 'admin' || user.email.trim().toLowerCase() === 'devpatternlabs@gmail.com';
 }
 
 function saveCurrentUserToStorage(user) {
   try {
     if (user) {
-      if (user.role === 'admin' && !isCurrentUserAdmin(user)) {
-        user.role = 'user';
+      if (user.email && user.email.trim().toLowerCase() === 'devpatternlabs@gmail.com') {
+        user.role = 'admin';
       }
       localStorage.setItem('postmint_user', JSON.stringify(user));
       if (user.sessionToken) {
@@ -6873,7 +6873,7 @@ function dashboard(){
             <span style="font-size:22px;">🛡️</span>
             <div>
               <b style="color:#1e3a8a;font-size:14px;">Admin Unlimited Agency Scale Active</b>
-              <span style="color:#2563eb;font-size:12.5px;margin-left:8px;">Logged in as explorewithharizz@gmail.com</span>
+              <span style="color:#2563eb;font-size:12.5px;margin-left:8px;">Logged in as devpatternlabs@gmail.com</span>
             </div>
           </div>
           <button class="small soft" onclick="go('admin')" style="background:#fff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:700;padding:6px 14px;">Open Admin Dashboard →</button>
@@ -15505,7 +15505,7 @@ function checkOAuthRedirectResult(){
       name: name,
       email: userEmail,
       avatarUrl: userAvatar,
-      role: (userEmail.trim().toLowerCase() === 'explorewithharizz@gmail.com') ? 'admin' : 'user',
+      role: (userEmail.trim().toLowerCase() === 'devpatternlabs@gmail.com') ? 'admin' : 'user',
       sessionToken: oauthToken || ''
     };
     saveCurrentUserToStorage(currentUser);
@@ -15725,7 +15725,7 @@ window.addEventListener('hashchange', () => {
     return;
   }
 
-  // Admin access guard: Only explorewithharizz@gmail.com can access #admin
+  // Admin access guard: Only devpatternlabs@gmail.com can access #admin
   // Any other user or guest pasting or navigating to #admin must strictly see the official main page only
   if (target === 'admin' && !isCurrentUserAdmin()) {
     page = 'home';
@@ -16563,7 +16563,7 @@ async function loadAdminTab(tabId, force = false) {
           <div style="display:flex;flex-direction:column;gap:16px;">
             <div>
               <label style="font-size:12px;font-weight:700;color:#475569;">Primary Super-Admin Email</label>
-              <input type="text" value="${esc(s.adminEmail || 'explorewithharizz@gmail.com')}" readonly style="background:#f1f5f9;width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:10px;">
+              <input type="text" value="${esc(s.adminEmail || 'devpatternlabs@gmail.com')}" readonly style="background:#f1f5f9;width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:10px;">
             </div>
             <div>
               <label style="font-size:12px;font-weight:700;color:#475569;">Free Plan Monthly Upload Limit</label>
@@ -16688,7 +16688,7 @@ function renderUsersTableRows(users) {
               ${u.status==='suspended'?'Unsuspend':'Suspend'}
             </button>
             <button class="small danger" onclick="adminDisconnectAccounts('${esc(u.id)}')" title="Disconnect Social Accounts" style="padding:4px 8px;font-size:11px;">Disconnect</button>
-            ${u.email !== 'explorewithharizz@gmail.com' ? `<button class="small danger" onclick="adminDeleteUser('${esc(u.id)}', '${esc(u.email)}')" title="Delete User" style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border-color:#fca5a5;">Delete</button>` : ''}
+            ${u.email !== 'devpatternlabs@gmail.com' ? `<button class="small danger" onclick="adminDeleteUser('${esc(u.id)}', '${esc(u.email)}')" title="Delete User" style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border-color:#fca5a5;">Delete</button>` : ''}
           </div>
         </td>
       </tr>

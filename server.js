@@ -32,8 +32,8 @@ loadEnvFile(path.join(BASE_DIR, '.env.local'));
 loadEnvFile(path.join(BASE_DIR, 'social-accounts.env'), true);
 loadEnvFile(path.join(BASE_DIR, 'auto', '.env.local'));
 
-// Supabase cloud credentials configured from the auto project
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://oadiscrojgfsszedilwp.supabase.co';
+// Supabase cloud credentials
+process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 process.env.SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'social-videos';
 
@@ -1827,13 +1827,13 @@ const server = http.createServer(async (req, res) => {
         redirectUri: process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/auth/youtube/callback`
       },
       meta: {
-        hasAppId: true,
-        hasAppSecret: true,
-        appId: process.env.META_APP_ID || '2680197525765699',
-        appSecret: process.env.META_APP_SECRET || '0764e538332d0eeb68deb98df70634d1',
+        hasAppId: Boolean(process.env.META_APP_ID),
+        hasAppSecret: Boolean(process.env.META_APP_SECRET),
+        appId: process.env.META_APP_ID || '',
+        appSecret: process.env.META_APP_SECRET || '',
         redirectUri: process.env.META_REDIRECT_URI || `http://localhost:${PORT}/api/oauth/meta/callback`,
         localRedirectUri: `http://localhost:${PORT}/api/oauth/meta/callback`,
-        prodRedirectUri: 'https://postmint-studio.vercel.app/api/oauth/meta/callback',
+        prodRedirectUri: (process.env.APP_URL || 'https://postsprint.devpatternlabs.com') + '/api/oauth/meta/callback',
         facebookPageId: process.env.FACEBOOK_PAGE_ID || '',
         facebookPageAccessToken: process.env.FACEBOOK_PAGE_ACCESS_TOKEN || '',
         instagramAccountId: process.env.INSTAGRAM_ACCOUNT_ID || '',
@@ -1873,8 +1873,8 @@ const server = http.createServer(async (req, res) => {
           `# Generated on: ${new Date().toISOString()}`,
           `SOCIAL_API_MOCK_MODE=${payload.socialMockMode !== undefined ? payload.socialMockMode : false}`,
           `NEXT_PUBLIC_SOCIAL_API_MOCK_MODE=${payload.socialMockMode !== undefined ? payload.socialMockMode : false}`,
-          `META_APP_ID=${payload.metaAppId || '2680197525765699'}`,
-          `META_APP_SECRET=${payload.metaAppSecret || '0764e538332d0eeb68deb98df70634d1'}`,
+          `META_APP_ID=${payload.metaAppId || process.env.META_APP_ID || ''}`,
+          `META_APP_SECRET=${payload.metaAppSecret || process.env.META_APP_SECRET || ''}`,
           `META_REDIRECT_URI=${payload.metaRedirectUri || `http://localhost:${PORT}/api/oauth/meta/callback`}`,
           `FACEBOOK_PAGE_ID=${payload.facebookPageId || ''}`,
           `FACEBOOK_PAGE_ACCESS_TOKEN=${payload.facebookPageAccessToken || ''}`,

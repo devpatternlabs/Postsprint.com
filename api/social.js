@@ -11,7 +11,7 @@ const facebook = require('../lib/facebook');
 const facebookService = require('../services/facebook');
 const socialChats = require('../lib/social-chats');
 const { getAuthenticatedUser } = require('../lib/auth-session');
-const { getUserEntitlements } = require('../lib/entitlements');
+const { getUserEntitlements, ADMIN_EMAIL } = require('../lib/entitlements');
 
 async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -715,7 +715,8 @@ async function handler(req, res) {
       const isVercelCron = Boolean(req.headers['x-vercel-cron']);
       const isSecretMatch = cronSecret && (authHeader === `Bearer ${cronSecret}` || req.query.secret === cronSecret);
       const authUser = await getAuthenticatedUser(req);
-      const isAdmin = authUser && (authUser.role === 'admin' || authUser.email === 'explorewithharizz@gmail.com');
+      const normalizedEmail = (authUser?.email_normalized || authUser?.email || '').trim().toLowerCase();
+      const isAdmin = authUser && (authUser.role === 'admin' || normalizedEmail === ADMIN_EMAIL);
 
       if (!isVercelCron && !isSecretMatch && !isAdmin) {
         return res.status(401).json({ success: false, error: 'Unauthorized cron trigger' });

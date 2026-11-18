@@ -4,8 +4,8 @@
 
 const db = require('../lib/db');
 
-const META_APP_ID = (process.env.META_APP_ID || '').trim() || '2680197525765699';
-const META_APP_SECRET = (process.env.META_APP_SECRET || '').trim() || '0764e538332d0eeb68deb98df70634d1';
+const META_APP_ID = (process.env.META_APP_ID || '').trim();
+const META_APP_SECRET = (process.env.META_APP_SECRET || '').trim();
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
 const GRAPH_VIDEO_BASE = `https://graph-video.facebook.com/${META_GRAPH_VERSION}`;
