@@ -53,6 +53,8 @@ const couponsHandler = require('./api/coupons');
 const adminHandler = require('./api/admin');
 const contactHandler = require('./api/contact');
 const siteHandler = require('./api/site');
+const socialHandler = require('./api/social');
+const chatHandler = require('./api/chat');
 
 const PORT = String(process.env.PORT || 3000).trim();
 
@@ -215,6 +217,38 @@ const server = http.createServer(async (req, res) => {
   // Public Site & Announcements API
   if (reqPath.startsWith('/api/site')) {
     adaptVercelHandler(siteHandler)(req, res);
+    return;
+  }
+
+  // AI Chat, Brand Audit & Calendar Generation
+  if (reqPath.startsWith('/api/chat')) {
+    adaptVercelHandler(chatHandler)(req, res);
+    return;
+  }
+
+  // Unified Social Gateway, Analytics & Shortlinks
+  if (reqPath === '/api/social' || reqPath.startsWith('/api/social/link') || reqPath.startsWith('/api/social/analytics') || reqPath.startsWith('/api/social/music') || reqPath.startsWith('/api/social/health')) {
+    adaptVercelHandler(socialHandler)(req, res);
+    return;
+  }
+
+  // Shortlink click tracker & redirect
+  if (req.method === 'GET' && reqPath.startsWith('/l/')) {
+    const code = reqPath.replace(/^\/l\//, '').trim();
+    const shortlink = await db.getShortlink(code);
+    if (shortlink && shortlink.original_url) {
+      const meta = {
+        ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '',
+        userAgent: req.headers['user-agent'] || '',
+        referer: req.headers['referer'] || ''
+      };
+      await db.recordShortlinkClick(code, meta).catch(() => {});
+      res.writeHead(302, { Location: shortlink.original_url });
+      res.end();
+      return;
+    }
+    res.writeHead(302, { Location: '/' });
+    res.end();
     return;
   }
 

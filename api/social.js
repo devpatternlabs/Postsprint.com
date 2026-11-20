@@ -1017,6 +1017,101 @@ async function handler(req, res) {
       return res.status(200).json({ success: true, entitlements });
     }
 
+    // -------------------------------------------------------------
+    // 10. GET /l/:code or /api/social/l - Shortlink Click Tracker & Redirector
+    // -------------------------------------------------------------
+    if (subpath === 'l' || subpath.startsWith('l/')) {
+      const code = (req.query?.code || subpath.replace(/^l\/?/, '')).trim();
+      const shortlink = await db.getShortlink(code);
+      if (shortlink && shortlink.original_url) {
+        const meta = {
+          ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '',
+          userAgent: req.headers['user-agent'] || '',
+          referer: req.headers['referer'] || ''
+        };
+        await db.recordShortlinkClick(code, meta).catch(() => {});
+        res.writeHead(302, { Location: shortlink.original_url });
+        return res.end();
+      }
+      res.writeHead(302, { Location: '/' });
+      return res.end();
+    }
+
+    // -------------------------------------------------------------
+    // 11. POST / GET /api/social/link - Create & List Shortlinks
+    // -------------------------------------------------------------
+    if (subpath === 'link' || subpath === 'shortlink' || subpath === 'shortlinks') {
+      if (req.method === 'POST') {
+        const authUser = await getAuthenticatedUser(req).catch(() => null);
+        const originalUrl = (payload.originalUrl || payload.url || '').trim();
+        if (!originalUrl) {
+          return res.status(400).json({ success: false, message: 'originalUrl is required' });
+        }
+        const link = await db.createShortlink({
+          originalUrl,
+          postId: payload.postId || null,
+          platform: payload.platform || 'all',
+          userId: authUser?.id || payload.userId || 'usr_default_postmint'
+        });
+        return res.status(200).json({ success: true, link });
+      }
+      if (req.method === 'GET') {
+        const authUser = await getAuthenticatedUser(req).catch(() => null);
+        const userId = authUser?.id || req.query?.userId || null;
+        const links = await db.getShortlinks(userId);
+        return res.status(200).json({ success: true, count: links.length, links });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 12. GET / POST /api/social/analytics - Analytics Summary & Live Metrics Sync
+    // -------------------------------------------------------------
+    if (subpath === 'analytics' || subpath === 'analytics/sync') {
+      const authUser = await getAuthenticatedUser(req).catch(() => null);
+      const userId = (authUser?.role === 'admin' && (req.query?.userId || payload?.userId)) ? (req.query?.userId || payload?.userId) : authUser?.id;
+
+      // Live metrics sync with connected YouTube / Meta platforms if requested
+      if (req.method === 'POST' || req.query?.sync === 'true') {
+        try {
+          const accounts = await db.getSocialAccounts(userId);
+          const posts = await db.getPosts(userId);
+
+          for (const p of posts) {
+            // Check YouTube videos
+            const ytTarget = (p.targets || []).find(t => t.platform === 'youtube' && t.status === 'published');
+            if (ytTarget && ytTarget.platform_post_id) {
+              const ytAcc = accounts.find(a => a.platform === 'youtube');
+              if (ytAcc && ytAcc.access_token) {
+                try {
+                  const decryptedToken = db.decryptToken ? db.decryptToken(ytAcc.access_token) : ytAcc.access_token;
+                  const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(ytTarget.platform_post_id)}`, {
+                    headers: { 'Authorization': `Bearer ${decryptedToken}` }
+                  });
+                  if (vRes.ok) {
+                    const vData = await vRes.json();
+                    const stats = vData.items?.[0]?.statistics;
+                    if (stats) {
+                      await db.updatePostMetrics(p.id, {
+                        views: Number(stats.viewCount || 0),
+                        likes: Number(stats.likeCount || 0),
+                        comments: Number(stats.commentCount || 0),
+                        impressions: Math.round(Number(stats.viewCount || 0) * 1.4)
+                      });
+                    }
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+        } catch (syncErr) {
+          console.warn('[Analytics Sync Warning]:', syncErr.message);
+        }
+      }
+
+      const analyticsData = await db.getAnalyticsOverview(userId);
+      return res.status(200).json({ success: true, ...analyticsData });
+    }
+
     return res.status(404).json({ success: false, error: `Unknown social API route: /api/social/${subpath}` });
   } catch (err) {
     console.error(`[Social API Error /${subpath}]:`, err.message);

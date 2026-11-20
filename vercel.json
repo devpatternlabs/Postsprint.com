@@ -115,6 +115,7 @@
     { "source": "/api/site/(.*)", "destination": "/api/site?subpath=$1" },
     { "source": "/api/site", "destination": "/api/site" },
     { "source": "/api/chat", "destination": "/api/chat" },
+    { "source": "/l/(.*)", "destination": "/api/social?subpath=l&code=$1" },
     { "source": "/login", "destination": "/" },
     { "source": "/signin", "destination": "/" },
     { "source": "/signup", "destination": "/" },
