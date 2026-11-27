@@ -189,7 +189,7 @@ async function handler(req, res) {
     // 1. POST /api/social/upload - High-Quality Supabase Storage Upload
     // -------------------------------------------------------------
     if (subpath === 'upload' && req.method === 'POST') {
-      const authUser = await getAuthenticatedUser(req);
+      const authUser = await getAuthenticatedUser(req, payload);
       if (!authUser) {
         return res.status(401).json({ success: false, error: 'Authentication required to upload media.' });
       }
@@ -230,12 +230,12 @@ async function handler(req, res) {
     // 2. POST /api/social/publish - Multi-Platform Publisher & Supabase Auto-Clean
     // -------------------------------------------------------------
     if (subpath === 'publish' && req.method === 'POST') {
-      const authUser = await getAuthenticatedUser(req);
+      const authUser = await getAuthenticatedUser(req, payload);
       if (!authUser) {
         return res.status(401).json({ success: false, error: 'Authentication required. Please log in to publish.' });
       }
-      const activeUserId = (authUser.role === 'admin' && payload.userId) ? payload.userId : authUser.id;
-      const userEmail = (authUser.role === 'admin' && payload.email) ? payload.email : authUser.email;
+      const activeUserId = (authUser.role === 'admin' && (payload.userId || payload.user_id)) ? (payload.userId || payload.user_id) : authUser.id;
+      const userEmail = (authUser.role === 'admin' && (payload.email || payload.userEmail)) ? (payload.email || payload.userEmail) : authUser.email;
       const entitlements = await getUserEntitlements(activeUserId, userEmail);
 
       if (!entitlements.canPublish) {
@@ -426,12 +426,12 @@ async function handler(req, res) {
     if (subpath === 'schedule' || subpath === 'posts/schedule') {
       if (req.method === 'POST') {
         const postData = payload.post || payload;
-        const authUser = await getAuthenticatedUser(req);
+        const authUser = await getAuthenticatedUser(req, postData);
         if (!authUser) {
           return res.status(401).json({ success: false, error: 'Authentication required. Please log in to schedule posts.' });
         }
         const activeUserId = (authUser.role === 'admin' && (postData.userId || payload.userId)) ? (postData.userId || payload.userId) : authUser.id;
-        const userEmail = (authUser.role === 'admin' && (postData.email || payload.email)) ? (postData.email || payload.email) : authUser.email;
+        const userEmail = (authUser.role === 'admin' && (postData.email || payload.email || postData.userEmail || payload.userEmail)) ? (postData.email || payload.email || postData.userEmail || payload.userEmail) : authUser.email;
         const entitlements = await getUserEntitlements(activeUserId, userEmail);
 
         if (!entitlements.canPublish) {

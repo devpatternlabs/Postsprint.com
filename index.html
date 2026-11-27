@@ -11334,9 +11334,12 @@ async function savePost(status){
           : (hasYouTube ? 'Streaming video bytes to YouTube Data API...' : `Publishing to ${platNames || 'platforms'}...`);
         setPostProgress(pId, 70, parallelMsg);
 
-        const pubToken = localStorage.getItem('postmint_token') || currentUser?.sessionToken || '';
+        const curUser = currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || JSON.parse(localStorage.getItem('postmint_user') || 'null');
+        const pubToken = localStorage.getItem('postmint_token') || curUser?.sessionToken || '';
         const pubHeaders = { 'Content-Type': 'application/json' };
         if (pubToken) pubHeaders['Authorization'] = `Bearer ${pubToken}`;
+        if (curUser?.id) pubHeaders['X-User-Id'] = curUser.id;
+        if (curUser?.email) pubHeaders['X-User-Email'] = curUser.email;
 
         const curMedia = asset(c.mediaId);
         const isVideoMedia = Boolean(
@@ -11362,10 +11365,11 @@ async function savePost(status){
         const pubRes = await fetch('/api/social/publish', {
           method: 'POST',
           headers: pubHeaders,
+          credentials: 'include',
           body: JSON.stringify({
             postId: pId,
-            userId: currentUser?.id || null,
-            userEmail: currentUser?.email || null,
+            userId: curUser?.id || null,
+            userEmail: curUser?.email || null,
             platforms: c.platforms,
             title: c.title || c.caption.slice(0, 60),
             caption: c.caption,
@@ -11691,17 +11695,21 @@ async function savePost(status){
     toast(`📅 Saving schedule to server for ${new Date(c.date).toLocaleString()}...`);
     const safeMediaUrl = (m?.url && !m.url.startsWith('blob:')) ? m.url : (m?.data && !m.data.startsWith('blob:')) ? m.data : null;
     try {
-      const schedToken = localStorage.getItem('postmint_token') || currentUser?.sessionToken || '';
+      const curUser = currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || JSON.parse(localStorage.getItem('postmint_user') || 'null');
+      const schedToken = localStorage.getItem('postmint_token') || curUser?.sessionToken || '';
       const schedHeaders = { 'Content-Type': 'application/json' };
       if (schedToken) schedHeaders['Authorization'] = `Bearer ${schedToken}`;
+      if (curUser?.id) schedHeaders['X-User-Id'] = curUser.id;
+      if (curUser?.email) schedHeaders['X-User-Email'] = curUser.email;
 
       const schedRes = await fetch('/api/social/schedule', {
         method: 'POST',
         headers: schedHeaders,
+        credentials: 'include',
         body: JSON.stringify({
           id: pId,
-          userId: currentUser?.id || null,
-          userEmail: currentUser?.email || null,
+          userId: curUser?.id || null,
+          userEmail: curUser?.email || null,
           title: c.title || c.caption.slice(0, 60),
           caption: c.caption,
           hashtags: c.hashtags,
@@ -12436,9 +12444,12 @@ async function retry(id) {
 
     setPostProgress(p.id, 70, `Streaming to ${platNames}...`);
 
-    const pubToken = localStorage.getItem('postmint_token') || currentUser?.sessionToken || '';
+    const curUser = currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || JSON.parse(localStorage.getItem('postmint_user') || 'null');
+    const pubToken = localStorage.getItem('postmint_token') || curUser?.sessionToken || '';
     const pubHeaders = { 'Content-Type': 'application/json' };
     if (pubToken) pubHeaders['Authorization'] = `Bearer ${pubToken}`;
+    if (curUser?.id) pubHeaders['X-User-Id'] = curUser.id;
+    if (curUser?.email) pubHeaders['X-User-Email'] = curUser.email;
 
     const res = await fetch('/api/social/publish', {
       method: 'POST',
@@ -12446,8 +12457,8 @@ async function retry(id) {
       credentials: 'include',
       body: JSON.stringify({
         postId: p.id,
-        userId: currentUser?.id || p.userId || 'usr_default_postmint',
-        userEmail: currentUser?.email || null,
+        userId: curUser?.id || p.userId || 'usr_default_postmint',
+        userEmail: curUser?.email || null,
         platforms: targets,
         title: p.title || p.caption.slice(0, 60),
         caption: p.caption,
