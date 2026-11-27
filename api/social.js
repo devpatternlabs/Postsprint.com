@@ -16,7 +16,7 @@ const { getUserEntitlements } = require('../lib/entitlements');
 async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-User-Email, X-UserId, X-UserEmail');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -37,7 +37,25 @@ async function handler(req, res) {
 
   let payload = {};
   if (req.body) {
-    payload = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body;
+    try {
+      payload = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body;
+    } catch (_) {
+      payload = {};
+    }
+  } else if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+    try {
+      const rawBody = await new Promise((resolve) => {
+        let data = '';
+        req.on('data', chunk => { data += chunk; });
+        req.on('end', () => resolve(data));
+        req.on('error', () => resolve(''));
+      });
+      if (rawBody) {
+        payload = JSON.parse(rawBody);
+      }
+    } catch (_) {
+      payload = {};
+    }
   }
 
   try {
