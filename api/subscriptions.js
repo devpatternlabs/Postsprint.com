@@ -3,7 +3,7 @@
 
 const db = require('../lib/db');
 const { getAuthenticatedUser } = require('../lib/auth-session');
-const { getUserEntitlements, ADMIN_EMAIL } = require('../lib/entitlements');
+const { getUserEntitlements } = require('../lib/entitlements');
 
 const PLANS = {
   free: {
@@ -138,8 +138,7 @@ async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'invalid_plan', message: 'Selected plan does not exist.' });
       }
 
-      const normalizedEmail = (authUser.email_normalized || authUser.email || '').trim().toLowerCase();
-      const isAdmin = authUser.role === 'admin' || normalizedEmail === ADMIN_EMAIL;
+      const isAdmin = authUser.role === 'admin' || authUser.email === 'explorewithharizz@gmail.com';
       const isDowngradeToFree = targetPlan === 'free';
       const hasVerifiedCoupon = Boolean(payload.couponVerified || payload.couponCode);
 

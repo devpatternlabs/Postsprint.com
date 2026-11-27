@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../lib/db');
 const { getAuthenticatedUser } = require('../lib/auth-session');
-const { ADMIN_EMAIL } = require('../lib/entitlements');
 
 async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,8 +18,7 @@ async function handler(req, res) {
 
   // PS-02 & PS-03: Strict Admin Authorization Gate
   const authUser = await getAuthenticatedUser(req);
-  const normalizedEmail = (authUser?.email_normalized || authUser?.email || '').trim().toLowerCase();
-  const isAdmin = authUser && (authUser.role === 'admin' || normalizedEmail === ADMIN_EMAIL);
+  const isAdmin = authUser && (authUser.role === 'admin' || authUser.email === 'explorewithharizz@gmail.com');
 
   if (!isAdmin) {
     return res.status(403).json({

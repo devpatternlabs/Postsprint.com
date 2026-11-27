@@ -11,7 +11,7 @@
     },
     "youtube": {
       "platformName": "YouTube Data API v3",
-      "clientId": "",
+      "clientId": "238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com",
       "clientSecretConfigured": true,
       "redirectUri": "http://localhost:3001/api/auth/youtube/callback"
     },

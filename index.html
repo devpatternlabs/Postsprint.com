@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head>
-<title>PostSprint — AI Brand & Social Media Studio by DevPatternLabs</title>
-<meta name="description" content="AI-powered website brand audits, 30-day automated content calendars, multi-platform lossless scheduling, and centralized engagement by DevPatternLabs.">
+<title>PostSprint — Social Media Scheduling & Management Platform</title>
+<meta name="description" content="PostSprint is the all-in-one social media scheduler to plan, create, and publish lossless content to Instagram, Facebook, and YouTube simultaneously.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://postsprint.devpatternlabs.com/">
 <!-- Open Graph Meta -->
@@ -3408,7 +3408,6 @@ Here's to creating with more joy and a little less overthinking. #PostSprint</te
         <a class="app-navbar-logo" href="#dashboard" onclick="go(currentUser ? 'dashboard' : 'home')" aria-label="PostSprint Dashboard">
           <img class="postsprint-symbol" src="assets/postsprint-icon.png" alt="PostSprint" width="28" height="28" style="width:28px;height:28px;object-fit:contain;flex-shrink:0;">
           <span class="app-navbar-brand">PostSprint</span>
-          <span style="font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;padding:2px 8px;border-radius:12px;margin-left:6px;display:inline-flex;align-items:center;gap:4px;">DevPatternLabs</span>
         </a>
       </div>
       <nav class="app-navbar-nav side-nav" id="sidebarNav" role="navigation" aria-label="Main Navigation"></nav>
@@ -3451,7 +3450,7 @@ Here's to creating with more joy and a little less overthinking. #PostSprint</te
 
       <!-- Account suspension banner -->
       <div id="suspendedNoticeBanner" style="display:none;background:#fef2f2;border-bottom:2px solid #ef4444;color:#991b1b;padding:11px 20px;text-align:center;font-size:13.5px;font-weight:600;align-items:center;justify-content:center;gap:12px;z-index:9999;">
-        <span>⛔</span> Your account has been suspended by the administrator. Uploading, scheduling, and publishing are temporarily disabled. Please contact devpatternlabs@gmail.com for assistance.
+        <span>⛔</span> Your account has been suspended by the administrator. Uploading, scheduling, and publishing are temporarily disabled. Please contact explorewithharizz@gmail.com for assistance.
       </div>
 
       <!-- Limit reached / Top upgrade banner -->
@@ -3595,14 +3594,14 @@ try {
 
 function isCurrentUserAdmin(user = currentUser) {
   if (!user || !user.email) return false;
-  return user.role === 'admin' || user.email.trim().toLowerCase() === 'devpatternlabs@gmail.com';
+  return user.email.trim().toLowerCase() === 'explorewithharizz@gmail.com';
 }
 
 function saveCurrentUserToStorage(user) {
   try {
     if (user) {
-      if (user.email && user.email.trim().toLowerCase() === 'devpatternlabs@gmail.com') {
-        user.role = 'admin';
+      if (user.role === 'admin' && !isCurrentUserAdmin(user)) {
+        user.role = 'user';
       }
       localStorage.setItem('postmint_user', JSON.stringify(user));
       if (user.sessionToken) {
@@ -6874,7 +6873,7 @@ function dashboard(){
             <span style="font-size:22px;">🛡️</span>
             <div>
               <b style="color:#1e3a8a;font-size:14px;">Admin Unlimited Agency Scale Active</b>
-              <span style="color:#2563eb;font-size:12.5px;margin-left:8px;">Logged in as devpatternlabs@gmail.com</span>
+              <span style="color:#2563eb;font-size:12.5px;margin-left:8px;">Logged in as explorewithharizz@gmail.com</span>
             </div>
           </div>
           <button class="small soft" onclick="go('admin')" style="background:#fff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:700;padding:6px 14px;">Open Admin Dashboard →</button>
@@ -11206,6 +11205,25 @@ async function savePost(status){
           }
         }
 
+        // Rehydrate rawFile from blobUrl / url / data if missing from window.uploadedFileBlobs
+        if (!rawFile && (currentMedia?.blobUrl || currentMedia?.url || currentMedia?.data)) {
+          const potentialBlob = currentMedia?.blobUrl || currentMedia?.url || currentMedia?.data;
+          if (typeof potentialBlob === 'string' && (potentialBlob.startsWith('blob:') || potentialBlob.startsWith('data:'))) {
+            try {
+              console.log('[Publish] Rehydrating rawFile blob from composer media...');
+              const resp = await fetch(potentialBlob);
+              if (resp.ok) {
+                rawFile = await resp.blob();
+                if (rawFile && c.mediaId && window.uploadedFileBlobs) {
+                  window.uploadedFileBlobs.set(c.mediaId, rawFile);
+                }
+              }
+            } catch (err) {
+              console.warn('[Publish] Blob rehydration failed:', err.message);
+            }
+          }
+        }
+
         // 1. Re-use active background upload promise if in flight (Bypasses Vercel 4.5MB limit & prevents duplicate upload)
         if (!storagePath && inFlight && inFlight.promise) {
           const onActiveProgress = (pct) => {
@@ -11224,11 +11242,48 @@ async function savePost(status){
 
         // 2. Direct Cloud Upload to Supabase Storage if no background upload was running
         if (!storagePath && rawFile) {
-          setPostProgress(pId, 20, 'Uploading high-definition video to cloud storage...');
+          setPostProgress(pId, 20, 'Uploading media to cloud storage...');
           storagePath = await uploadBinaryDirectToSupabase(rawFile, (pct) => {
             const scaledPct = Math.min(65, Math.round(20 + (pct * 0.45)));
-            setPostProgress(pId, scaledPct, `Uploading video bytes (${pct}%)...`);
+            setPostProgress(pId, scaledPct, `Uploading media bytes (${pct}%)...`);
           });
+
+          // Fallback to /api/social/upload if direct Supabase upload failed and file < 4.5MB
+          if (!storagePath && rawFile && rawFile.size < 4.5 * 1024 * 1024) {
+            try {
+              setPostProgress(pId, 30, 'Direct upload failed, attempting server relay...');
+              const reader = new FileReader();
+              const base64Data = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(rawFile);
+              });
+              if (base64Data) {
+                const upToken = localStorage.getItem('postmint_token') || currentUser?.sessionToken || '';
+                const upHeaders = { 'Content-Type': 'application/json' };
+                if (upToken) upHeaders['Authorization'] = `Bearer ${upToken}`;
+                const upRes = await fetch('/api/social/upload', {
+                  method: 'POST',
+                  headers: upHeaders,
+                  body: JSON.stringify({
+                    filename: rawFile.name || 'media.mp4',
+                    mimeType: rawFile.type || 'video/mp4',
+                    fileBase64: base64Data,
+                    folder: 'posts'
+                  })
+                });
+                if (upRes.ok) {
+                  const upData = await upRes.json();
+                  if (upData.success && (upData.storagePath || upData.url)) {
+                    storagePath = upData.storagePath;
+                    console.log('[Publish] Server relay upload succeeded! storagePath:', storagePath);
+                  }
+                }
+              }
+            } catch (relayErr) {
+              console.warn('[Publish] Server relay upload error:', relayErr.message);
+            }
+          }
         }
 
         if (storagePath) {
@@ -11251,6 +11306,26 @@ async function savePost(status){
             fr.onerror = () => resolve(null);
             fr.readAsDataURL(rawFile);
           });
+        }
+
+        // Hard Guard: verify media exists before dispatching to /api/social/publish
+        const hasMediaPayload = Boolean(storagePath || mediaBase64 || safeMediaUrl);
+        const requiresMediaPublish = (c.platforms || []).some(p => ['instagram', 'youtube'].includes(p.toLowerCase()));
+        if (!hasMediaPayload && requiresMediaPublish) {
+          console.error('[Publish Guard] No valid media source could be prepared for cloud publishing.');
+          setPostProgress(pId, 0, 'Upload failed: media could not be saved to cloud storage.');
+          commit(() => {
+            const p = db.posts.find(x => x.id === pId);
+            if (p) {
+              p.status = 'Failed';
+              p.upload_status = 'failed';
+              p.processing_status = 'failed';
+              p.error = 'Media file could not be uploaded to cloud storage. Please re-select the media file and try again.';
+            }
+          });
+          render();
+          toast('⚠️ Cloud media upload could not be completed. Please re-select the media file and try again.');
+          return;
         }
 
         const platNames = (c.platforms || []).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ');
@@ -11574,6 +11649,32 @@ async function savePost(status){
         } catch (reelErr) {
           console.warn('[Schedule Reel Creation] Warning:', reelErr.message);
         }
+      }
+    }
+
+    const rawF = (window.uploadedFileBlobs && window.uploadedFileBlobs.get(c.mediaId)) || null;
+    let schedRawFile = rawF;
+    if (!schedRawFile && (m?.blobUrl || m?.url || m?.data)) {
+      const pBlob = m?.blobUrl || m?.url || m?.data;
+      if (typeof pBlob === 'string' && (pBlob.startsWith('blob:') || pBlob.startsWith('data:'))) {
+        try {
+          const resp = await fetch(pBlob);
+          if (resp.ok) {
+            schedRawFile = await resp.blob();
+            if (schedRawFile && c.mediaId && window.uploadedFileBlobs) {
+              window.uploadedFileBlobs.set(c.mediaId, schedRawFile);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (m && !m.storagePath && schedRawFile) {
+      toast('⏳ Uploading media to cloud before scheduling...');
+      const sPath = await uploadBinaryDirectToSupabase(schedRawFile);
+      if (sPath) {
+        m.storagePath = sPath;
+        persist();
       }
     }
 
@@ -12268,11 +12369,32 @@ async function retry(id) {
   const platNames = targets.join(' & ');
 
   const curM = asset(p.mediaId);
-  const rawF = (window.uploadedFileBlobs && window.uploadedFileBlobs.get(p.mediaId)) || null;
+  let rawF = (window.uploadedFileBlobs && window.uploadedFileBlobs.get(p.mediaId)) || null;
+  if (!rawF && (curM?.blobUrl || curM?.url || curM?.data)) {
+    const pBlob = curM?.blobUrl || curM?.url || curM?.data;
+    if (typeof pBlob === 'string' && (pBlob.startsWith('blob:') || pBlob.startsWith('data:'))) {
+      try {
+        const resp = await fetch(pBlob);
+        if (resp.ok) {
+          rawF = await resp.blob();
+          if (rawF && p.mediaId && window.uploadedFileBlobs) {
+            window.uploadedFileBlobs.set(p.mediaId, rawF);
+          }
+        }
+      } catch (_) {}
+    }
+  }
   let storagePath = p.storagePath || curM?.storagePath || null;
   let safeMediaUrl = (p.mediaUrl && !p.mediaUrl.startsWith('blob:')) ? p.mediaUrl : (curM?.url && !curM.url.startsWith('blob:')) ? curM.url : null;
 
   const hasYt = targets.some(plat => plat.toLowerCase() === 'youtube');
+  const hasMeta = targets.some(plat => ['facebook', 'instagram'].includes(plat.toLowerCase()));
+  if (!storagePath && !safeMediaUrl && !rawF && (hasYt || hasMeta)) {
+    toast('⚠️ Media is no longer available in local memory or cloud. Please edit the post and re-select your media file.');
+    editPost(id);
+    return;
+  }
+
   const isVideoMedia = Boolean(
     (curM?.type && curM.type.startsWith('video')) ||
     (rawF?.type && rawF.type.startsWith('video')) ||
@@ -13315,7 +13437,7 @@ function prefillWorkingSocialKeys(){
   if($('#inbuildMetaAppId')) $('#inbuildMetaAppId').value = '2680197525765699';
   if($('#inbuildMetaRedirect')) $('#inbuildMetaRedirect').value = origin + '/api/oauth/meta/callback';
   if($('#inbuildFacebookPageId')) $('#inbuildFacebookPageId').value = '1399357519919142';
-  if($('#inbuildGoogleClientId')) $('#inbuildGoogleClientId').value = '';
+  if($('#inbuildGoogleClientId')) $('#inbuildGoogleClientId').value = '238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com';
   if($('#inbuildGoogleRedirect')) $('#inbuildGoogleRedirect').value = origin + '/api/auth/youtube/callback';
   if($('#inbuildCustomSiteName')) $('#inbuildCustomSiteName').value = 'Postsprint Social Studio';
   if($('#inbuildCustomSiteUrl')) $('#inbuildCustomSiteUrl').value = origin;
@@ -13333,7 +13455,7 @@ function copyAllEnvConfig(){
   const fbPageTok = $('#inbuildFacebookPageToken')?.value || 'CONFIGURED_IN_SERVER_ENV';
   const igAccId = $('#inbuildInstagramAccountId')?.value || '';
   const igTok = $('#inbuildInstagramToken')?.value || '';
-  const gId = $('#inbuildGoogleClientId')?.value || '';
+  const gId = $('#inbuildGoogleClientId')?.value || '238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com';
   const gSec = $('#inbuildGoogleClientSecret')?.value || 'CONFIGURED_IN_SERVER_ENV';
   const gRedir = $('#inbuildGoogleRedirect')?.value || (origin + '/api/auth/youtube/callback');
   const snapId = $('#inbuildSnapchatId')?.value || '';
@@ -13423,7 +13545,7 @@ function renderInbuildSocialModal(data, highlightPlatform){
 
   const defaultMetaId = '2680197525765699';
   const defaultMetaSecret = '';
-  const defaultGoogleId = '';
+  const defaultGoogleId = '238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com';
   const defaultGoogleSecret = '';
 
   const metaAppIdVal = meta.appId || defaultMetaId;
@@ -13542,7 +13664,7 @@ function renderInbuildSocialModal(data, highlightPlatform){
           <div class="formgrid">
             <div>
               <label style="font-size:11px;">Google OAuth Client ID</label>
-              <input id="inbuildGoogleClientId" value="${esc(googleClientIdVal)}" placeholder="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com">
+              <input id="inbuildGoogleClientId" value="${esc(googleClientIdVal)}" placeholder="238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com">
             </div>
             <div>
               <label style="font-size:11px;">Google Client Secret</label>
@@ -14419,459 +14541,137 @@ function useAIVideo(){
   composer.mediaId=aiVideoResult.mediaObj.id;
   editing=null;go('create');toast('Loaded AI Video into Create Post as '+composer.type+'!');
 }
-let currentBrandAudit = null;
-let brandAuditLoading = false;
-let aiTab = 'brand_audit'; // 'brand_audit' | 'chat'
-let brandPlatformFilter = 'All';
-
-async function runBrandAudit() {
-  const urlInput = document.getElementById('brandAuditUrl');
-  const rawUrl = (urlInput ? urlInput.value : '').trim();
-  if (!rawUrl) {
-    return toast('Please enter a website URL to audit (e.g. devpatternlabs.com)');
-  }
-  brandAuditLoading = true;
-  render();
-  try {
-    toast('🔍 Scanning website and synthesizing 30-day content calendar...');
-    const resp = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'brand_audit',
-        url: rawUrl
-      })
-    });
-    if (!resp.ok) {
-      throw new Error('Server responded with HTTP ' + resp.status);
-    }
-    const data = await resp.json();
-    if (data.success && data.brandMatrix && data.calendar) {
-      currentBrandAudit = data;
-      toast('✅ 30-Day Brand Calendar successfully generated!');
-    } else {
-      throw new Error(data.error || 'Failed to generate brand calendar');
-    }
-  } catch (err) {
-    console.error('[BrandAudit Error]:', err);
-    toast('Error generating calendar: ' + err.message);
-  } finally {
-    brandAuditLoading = false;
-    render();
-  }
-}
-
-function scheduleCalendarDay(dayIndex) {
-  if (!currentBrandAudit || !currentBrandAudit.calendar) return;
-  const item = currentBrandAudit.calendar[dayIndex];
-  if (!item) return;
-
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + (item.day || 1));
-  targetDate.setHours(10, 0, 0, 0);
-
-  composer = fresh();
-  composer.caption = item.caption;
-  composer.title = item.hook || `Day ${item.day}`;
-  composer.type = 'Post';
-  composer.ratio = '1:1';
-  composer.scheduledAt = targetDate.toISOString().slice(0, 16);
-  composer.date = composer.scheduledAt;
-  
-  const plat = (item.recommendedPlatform || 'instagram').toLowerCase();
-  const platName = plat.includes('insta') ? 'Instagram' : plat.includes('face') ? 'Facebook' : plat.includes('you') ? 'YouTube' : 'Instagram';
-  composer.platforms = [platName];
-
-  editing = null;
-  go('create');
-  toast(`Day ${item.day} post loaded into composer for ${platName}!`);
-}
-
-function scheduleAllCalendarDays() {
-  if (!currentBrandAudit || !currentBrandAudit.calendar || currentBrandAudit.calendar.length === 0) return;
-  if (!confirm(`Schedule all ${currentBrandAudit.calendar.length} days into your PostSprint publishing queue?`)) return;
-
-  const now = new Date();
-  let scheduledCount = 0;
-
-  currentBrandAudit.calendar.forEach((item, idx) => {
-    const postDate = new Date(now);
-    postDate.setDate(postDate.getDate() + idx + 1);
-    postDate.setHours(10, 0, 0, 0);
-
-    const plat = (item.recommendedPlatform || 'instagram').toLowerCase();
-    const platName = plat.includes('insta') ? 'Instagram' : plat.includes('face') ? 'Facebook' : plat.includes('you') ? 'YouTube' : 'Instagram';
-
-    const newPost = {
-      id: 'post_cal_' + Date.now() + '_' + idx,
-      userId: currentUser?.id || 'usr_default_postmint',
-      title: item.hook || `Day ${item.day}`,
-      caption: item.caption,
-      platforms: [platName],
-      status: 'Scheduled',
-      type: 'Post',
-      scheduledAt: postDate.toISOString(),
-      date: postDate.toISOString(),
-      createdAt: new Date().toISOString(),
-      metrics: { reach: 0, views: 0, likes: 0, comments: 0, clicks: 0 }
-    };
-
-    db.posts.unshift(newPost);
-    scheduledCount++;
-  });
-
-  commit(() => {});
-  toast(`🎉 Successfully queued ${scheduledCount} posts across the next 30 days!`);
-  go('calendar');
-}
-
-function copyCalendarCaption(dayIndex) {
-  if (!currentBrandAudit?.calendar?.[dayIndex]) return;
-  const item = currentBrandAudit.calendar[dayIndex];
-  navigator.clipboard.writeText(item.caption).then(() => {
-    toast(`Day ${item.day} caption copied to clipboard!`);
-  }).catch(() => {
-    toast('Failed to copy to clipboard.');
-  });
-}
-
-function copyMediaPrompt(dayIndex) {
-  if (!currentBrandAudit?.calendar?.[dayIndex]) return;
-  const item = currentBrandAudit.calendar[dayIndex];
-  navigator.clipboard.writeText(item.mediaPrompt || '').then(() => {
-    toast(`Day ${item.day} visual prompt copied!`);
-  }).catch(() => {
-    toast('Failed to copy to clipboard.');
-  });
-}
-
-function exportCalendarCsv() {
-  if (!currentBrandAudit || !currentBrandAudit.calendar) return;
-  const rows = [
-    ['Day', 'Pillar', 'Recommended Platform', 'Best Time', 'Hook', 'Caption', 'AI Media Prompt'],
-    ...currentBrandAudit.calendar.map(c => [
-      c.day,
-      c.pillar,
-      c.recommendedPlatform,
-      c.bestTime,
-      c.hook,
-      c.caption,
-      c.mediaPrompt
-    ])
-  ];
-  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${(currentBrandAudit.brandMatrix?.brandName || 'Brand').replace(/\s+/g, '_')}_30_Day_Content_Calendar.csv`;
-  a.click();
-  toast('30-Day Content Calendar CSV exported!');
-}
-
 function ai(){
-  const titleHtml = `PostSprint AI Studio <span class="badge" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;vertical-align:middle;margin-left:6px;">PRO</span>`;
-
-  const tabsHtml = `
-    <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid #e2e8f0;padding-bottom:12px;flex-wrap:wrap;">
-      <button type="button" class="btn" style="background:${aiTab==='brand_audit'?'#2563eb':'#f1f5f9'};color:${aiTab==='brand_audit'?'#fff':'#334155'};border-radius:20px;padding:8px 18px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:${aiTab==='brand_audit'?'0 2px 8px rgba(37,99,235,0.25)':'none'};" onclick="aiTab='brand_audit';render();">
-        ⚡ Website Brand Audit & 30-Day Calendar
-      </button>
-      <button type="button" class="btn" style="background:${aiTab==='chat'?'#2563eb':'#f1f5f9'};color:${aiTab==='chat'?'#fff':'#334155'};border-radius:20px;padding:8px 18px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:${aiTab==='chat'?'0 2px 8px rgba(37,99,235,0.25)':'none'};" onclick="aiTab='chat';render();">
-        💬 Zoya AI Content Assistant
-      </button>
-    </div>
+  const headerActions = `
+    <button type="button" class="btn-soft-outline" style="font-size:12.5px;" onclick="toast('Try clicking any prompt starter below!')">
+      💡 Try example prompts
+    </button>
   `;
 
-  if (aiTab === 'chat') {
-    const headerActions = `
-      <button type="button" class="btn-soft-outline" style="font-size:12.5px;" onclick="toast('Try clicking any prompt starter below!')">
-        💡 Try example prompts
-      </button>
-    `;
+  const titleHtml = `Zoya AI <span class="badge" style="background:#dcfce7;color:#15803d;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;vertical-align:middle;margin-left:6px;">BETA</span>`;
 
-    return heading(titleHtml, 'Your creative partner for social media. Get ideas, captions, hashtags and more.', headerActions, '') + tabsHtml + `
-      <div class="zoya-split-layout">
-        <!-- MAIN CHAT & STARTERS AREA -->
-        <div class="master-card" style="padding:24px;">
-          <!-- Zoya Greeting -->
-          <div style="display:flex;align-items:flex-start;gap:14px;">
-            <img src="${mintAvatar}" alt="Zoya" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1.5px solid #dbeafe;flex-shrink:0;">
-            <div style="flex:1;">
-              <b style="font-size:14px;color:#0f172a;display:block;margin-bottom:6px;">Zoya</b>
-              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;font-size:13.5px;color:#1e293b;line-height:1.6;">
-                Hi! I'm Zoya, your AI creative assistant.<br>
-                I can help you write captions, generate ideas, find hashtags, plan your content and more. What would you like to create today?
-              </div>
-            </div>
-          </div>
-
-          <!-- 2x3 Prompt Starter Grid -->
-          <div class="zoya-starters-2col">
-            <div class="zoya-starter-card" onclick="sendAiChatMessage('Write a caption for a product post')">
-              <span style="font-size:18px;">✍️</span>
-              <div>
-                <div style="color:#0f172a;font-weight:600;">Write a caption</div>
-                <small style="color:#64748b;font-size:11px;">for a product post</small>
-              </div>
-            </div>
-
-            <div class="zoya-starter-card" onclick="sendAiChatMessage('Generate hashtag ideas for social growth')">
-              <span style="font-size:18px;">#️⃣</span>
-              <div>
-                <div style="color:#0f172a;font-weight:600;">Generate hashtag ideas</div>
-                <small style="color:#64748b;font-size:11px;">for better reach</small>
-              </div>
-            </div>
-
-            <div class="zoya-starter-card" onclick="sendAiChatMessage('Give me 5 viral content ideas for my brand')">
-              <span style="font-size:18px;">💡</span>
-              <div>
-                <div style="color:#0f172a;font-weight:600;">Give me content ideas</div>
-                <small style="color:#64748b;font-size:11px;">for weekly consistency</small>
-              </div>
-            </div>
-
-            <div class="zoya-starter-card" onclick="sendAiChatMessage('Turn my notes into a structured social media post')">
-              <span style="font-size:18px;">📝</span>
-              <div>
-                <div style="color:#0f172a;font-weight:600;">Turn my notes into a post</div>
-                <small style="color:#64748b;font-size:11px;">with high-converting CTA</small>
-              </div>
-            </div>
-
-            <div class="zoya-starter-card" onclick="sendAiChatMessage('Create a 7-day social media content plan')">
-              <span style="font-size:18px;">📅</span>
-              <div>
-                <div style="color:#0f172a;font-weight:600;">Create a content plan</div>
-                <small style="color:#64748b;font-size:11px;">across Instagram, Facebook, YouTube</small>
-              </div>
-            </div>
-
-            <div class="zoya-starter-card" onclick="sendAiChatMessage('Suggest post visuals and aesthetic direction')">
-              <span style="font-size:18px;">🎨</span>
-              <div>
-                <div style="color:#0f172a;font-weight:600;">Suggest post visuals</div>
-                <small style="color:#64748b;font-size:11px;">and creative composition</small>
-              </div>
-            </div>
-          </div>
-
-          <!-- Chat Stream Output -->
-          <div class="ai-chat-stream" id="chatStream" style="margin-top:16px;"></div>
-
-          <!-- Chat Input Bar -->
-          <div class="zoya-chat-bar">
-            <span style="font-size:16px;color:#94a3b8;cursor:pointer;" onclick="toast('Attach file or image')" title="Attach">📎</span>
-            <input type="text" id="chatInput" placeholder="Ask me anything about your content..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiChatMessage();}">
-            <button type="button" class="zoya-send-btn" onclick="sendAiChatMessage()" title="Send">
-              ➤
-            </button>
-          </div>
-        </div>
-
-        <!-- RIGHT SIDEBAR: RECENT PROMPTS & PRO TIP -->
-        <div style="display:flex;flex-direction:column;gap:16px;">
-          <!-- Recent Prompts -->
-          <div class="master-card">
-            <div style="font-size:13.5px;font-weight:700;color:#0f172a;margin-bottom:12px;">Recent prompts</div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('Caption for product launch')">
-                💬 Caption for product launch
-              </div>
-              <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('Hashtags for travel content')">
-                💬 Hashtags for travel content
-              </div>
-              <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('1 week Instagram content plan')">
-                💬 1 week Instagram content plan
-              </div>
-              <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('Rewrite this caption to make it more engaging')">
-                💬 Rewrite this caption
-              </div>
-              <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('YouTube video ideas for creators')">
-                💬 YouTube video ideas
-              </div>
-            </div>
-            <button type="button" class="btn-soft-outline" style="width:100%;font-size:12px;margin-top:14px;" onclick="clearAiChat()">
-              Clear history
-            </button>
-          </div>
-
-          <!-- Pro Tip Card -->
-          <div class="master-card" style="background:#fefce8;border-color:#fef08a;">
-            <div style="display:flex;align-items:flex-start;gap:10px;">
-              <span style="font-size:20px;line-height:1;">💡</span>
-              <div>
-                <b style="font-size:13px;color:#854d0e;display:block;margin-bottom:4px;">Pro tip</b>
-                <p style="margin:0;font-size:12px;color:#713f12;line-height:1.5;">
-                  Be specific about your brand, tone and audience for better results.
-                </p>
-              </div>
+  return heading(titleHtml, 'Your creative partner for social media. Get ideas, captions, hashtags and more.', headerActions, '') + `
+    <div class="zoya-split-layout">
+      <!-- MAIN CHAT & STARTERS AREA -->
+      <div class="master-card" style="padding:24px;">
+        <!-- Zoya Greeting -->
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <img src="${mintAvatar}" alt="Zoya" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1.5px solid #dbeafe;flex-shrink:0;">
+          <div style="flex:1;">
+            <b style="font-size:14px;color:#0f172a;display:block;margin-bottom:6px;">Zoya</b>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;font-size:13.5px;color:#1e293b;line-height:1.6;">
+              Hi! I'm Zoya, your AI creative assistant.<br>
+              I can help you write captions, generate ideas, find hashtags, plan your content and more. What would you like to create today?
             </div>
           </div>
         </div>
-      </div>
-    `;
-  }
 
-  // BRAND AUDIT & 30-DAY CALENDAR VIEW
-  const auditHeaderActions = currentBrandAudit ? `
-    <div style="display:flex;align-items:center;gap:10px;">
-      <button type="button" class="btn-primary-blue" style="font-size:13px;padding:8px 18px;font-weight:700;" onclick="scheduleAllCalendarDays()">
-        🚀 Schedule All 30 Days
-      </button>
-      <button type="button" class="btn-soft-outline" style="font-size:13px;padding:8px 16px;" onclick="exportCalendarCsv()">
-        📥 Export CSV
-      </button>
-    </div>
-  ` : '';
+        <!-- 2x3 Prompt Starter Grid -->
+        <div class="zoya-starters-2col">
+          <div class="zoya-starter-card" onclick="sendAiChatMessage('Write a caption for a product post')">
+            <span style="font-size:18px;">✍️</span>
+            <div>
+              <div style="color:#0f172a;font-weight:600;">Write a caption</div>
+              <small style="color:#64748b;font-size:11px;">for a product post</small>
+            </div>
+          </div>
 
-  let auditContent = `
-    <!-- Top Scanner Hero Card -->
-    <div class="master-card" style="background:linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);border:1.5px solid #bfdbfe;padding:24px;margin-bottom:24px;border-radius:16px;">
-      <div style="max-width:800px;">
-        <div style="display:inline-flex;align-items:center;gap:8px;background:#dbeafe;color:#1e40af;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:12px;">
-          <span>⚡ DevPatternLabs Proprietary Brand Engine</span>
+          <div class="zoya-starter-card" onclick="sendAiChatMessage('Generate hashtag ideas for social growth')">
+            <span style="font-size:18px;">#️⃣</span>
+            <div>
+              <div style="color:#0f172a;font-weight:600;">Generate hashtag ideas</div>
+              <small style="color:#64748b;font-size:11px;">for better reach</small>
+            </div>
+          </div>
+
+          <div class="zoya-starter-card" onclick="sendAiChatMessage('Give me 5 viral content ideas for my brand')">
+            <span style="font-size:18px;">💡</span>
+            <div>
+              <div style="color:#0f172a;font-weight:600;">Give me content ideas</div>
+              <small style="color:#64748b;font-size:11px;">for weekly consistency</small>
+            </div>
+          </div>
+
+          <div class="zoya-starter-card" onclick="sendAiChatMessage('Turn my notes into a structured social media post')">
+            <span style="font-size:18px;">📝</span>
+            <div>
+              <div style="color:#0f172a;font-weight:600;">Turn my notes into a post</div>
+              <small style="color:#64748b;font-size:11px;">with high-converting CTA</small>
+            </div>
+          </div>
+
+          <div class="zoya-starter-card" onclick="sendAiChatMessage('Create a 7-day social media content plan')">
+            <span style="font-size:18px;">📅</span>
+            <div>
+              <div style="color:#0f172a;font-weight:600;">Create a content plan</div>
+              <small style="color:#64748b;font-size:11px;">across Instagram, Facebook, YouTube</small>
+            </div>
+          </div>
+
+          <div class="zoya-starter-card" onclick="sendAiChatMessage('Suggest post visuals and aesthetic direction')">
+            <span style="font-size:18px;">🎨</span>
+            <div>
+              <div style="color:#0f172a;font-weight:600;">Suggest post visuals</div>
+              <small style="color:#64748b;font-size:11px;">and creative composition</small>
+            </div>
+          </div>
         </div>
-        <h2 style="font-size:22px;color:#0f172a;margin:0 0 8px;font-weight:800;letter-spacing:-0.5px;">
-          Instant AI Brand Audit & 30-Day Social Calendar
-        </h2>
-        <p style="font-size:13.5px;color:#475569;margin:0 0 20px;line-height:1.5;">
-          Enter any business or client website. PostSprint extracts brand tone, value pillars, and audience profile, then generates a complete 30-day multi-platform publishing calendar ready to schedule in 1 click.
-        </p>
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <input type="url" id="brandAuditUrl" placeholder="Enter website URL (e.g. devpatternlabs.com or client-site.com)" value="${currentBrandAudit?.scraped?.url || ''}" style="flex:1;min-width:260px;padding:12px 16px;border:1.5px solid #cbd5e1;border-radius:12px;font-size:14px;background:#fff;" onkeydown="if(event.key==='Enter'){runBrandAudit();}">
-          <button type="button" class="btn-primary-blue" style="padding:12px 24px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;" onclick="runBrandAudit()" ${brandAuditLoading ? 'disabled' : ''}>
-            ${brandAuditLoading ? '⏳ Auditing Website...' : '🔍 Audit & Generate 30-Day Calendar'}
+        <!-- Chat Stream Output -->
+        <div class="ai-chat-stream" id="chatStream" style="margin-top:16px;"></div>
+
+        <!-- Chat Input Bar -->
+        <div class="zoya-chat-bar">
+          <span style="font-size:16px;color:#94a3b8;cursor:pointer;" onclick="toast('Attach file or image')" title="Attach">📎</span>
+          <input type="text" id="chatInput" placeholder="Ask me anything about your content..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiChatMessage();}">
+          <button type="button" class="zoya-send-btn" onclick="sendAiChatMessage()" title="Send">
+            ➤
           </button>
         </div>
       </div>
+
+      <!-- RIGHT SIDEBAR: RECENT PROMPTS & PRO TIP -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Recent Prompts -->
+        <div class="master-card">
+          <div style="font-size:13.5px;font-weight:700;color:#0f172a;margin-bottom:12px;">Recent prompts</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('Caption for product launch')">
+              💬 Caption for product launch
+            </div>
+            <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('Hashtags for travel content')">
+              💬 Hashtags for travel content
+            </div>
+            <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('1 week Instagram content plan')">
+              💬 1 week Instagram content plan
+            </div>
+            <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('Rewrite this caption to make it more engaging')">
+              💬 Rewrite this caption
+            </div>
+            <div style="font-size:12.5px;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:8px;cursor:pointer;" onclick="sendAiChatMessage('YouTube video ideas for creators')">
+              💬 YouTube video ideas
+            </div>
+          </div>
+          <button type="button" class="btn-soft-outline" style="width:100%;font-size:12px;margin-top:14px;" onclick="clearAiChat()">
+            Clear history
+          </button>
+        </div>
+
+        <!-- Pro Tip Card -->
+        <div class="master-card" style="background:#fefce8;border-color:#fef08a;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:20px;line-height:1;">💡</span>
+            <div>
+              <b style="font-size:13px;color:#854d0e;display:block;margin-bottom:4px;">Pro tip</b>
+              <p style="margin:0;font-size:12px;color:#713f12;line-height:1.5;">
+                Be specific about your brand, tone and audience for better results.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
-
-  if (brandAuditLoading) {
-    auditContent += `
-      <div class="master-card" style="text-align:center;padding:48px 24px;">
-        <div style="display:inline-block;width:48px;height:48px;border:4px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px;"></div>
-        <h3 style="font-size:18px;color:#0f172a;margin:0 0 8px;">Auditing Website & Crafting 30-Day Calendar...</h3>
-        <p style="font-size:13px;color:#64748b;max-width:500px;margin:0 auto;line-height:1.5;">
-          Scanning meta signals, value propositions, and headings to engineer brand voice, content pillars, and high-converting hooks.
-        </p>
-      </div>
-    `;
-  } else if (currentBrandAudit) {
-    const bm = currentBrandAudit.brandMatrix || {};
-    const cal = currentBrandAudit.calendar || [];
-    const filteredCal = brandPlatformFilter === 'All' ? cal : cal.filter(c => (c.recommendedPlatform || '').toLowerCase() === brandPlatformFilter.toLowerCase());
-
-    auditContent += `
-      <!-- BRAND MATRIX CARD -->
-      <div class="master-card" style="padding:24px;margin-bottom:24px;border-left:4px solid #2563eb;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-          <div>
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#2563eb;letter-spacing:0.5px;">Brand Identity Matrix</span>
-            <h3 style="font-size:20px;color:#0f172a;margin:2px 0 0;font-weight:800;">${esc(bm.brandName || 'Audited Brand')}</h3>
-          </div>
-          <div style="display:flex;gap:6px;">
-            ${(bm.suggestedPalette || []).map(hex => `<span style="width:24px;height:24px;border-radius:6px;background:${esc(hex)};box-shadow:0 1px 3px rgba(0,0,0,0.1);display:inline-block;" title="${esc(hex)}"></span>`).join('')}
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;margin-bottom:18px;">
-          <div style="background:#f8fafc;padding:12px 16px;border-radius:10px;">
-            <small style="color:#64748b;font-size:11px;font-weight:600;display:block;margin-bottom:4px;">TAGLINE</small>
-            <span style="font-size:13px;color:#0f172a;font-weight:600;">${esc(bm.tagline || 'N/A')}</span>
-          </div>
-          <div style="background:#f8fafc;padding:12px 16px;border-radius:10px;">
-            <small style="color:#64748b;font-size:11px;font-weight:600;display:block;margin-bottom:4px;">BRAND VOICE</small>
-            <span style="font-size:13px;color:#0f172a;font-weight:600;">${esc(bm.voice || 'N/A')}</span>
-          </div>
-          <div style="background:#f8fafc;padding:12px 16px;border-radius:10px;">
-            <small style="color:#64748b;font-size:11px;font-weight:600;display:block;margin-bottom:4px;">PRIMARY AUDIENCE</small>
-            <span style="font-size:13px;color:#0f172a;font-weight:600;">${esc(bm.primaryAudience || 'N/A')}</span>
-          </div>
-        </div>
-
-        <div style="margin-bottom:14px;">
-          <small style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px;">Content Pillars</small>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${(bm.contentPillars || []).map(p => `<span style="background:#dbeafe;color:#1e40af;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;">📌 ${esc(p)}</span>`).join('')}
-          </div>
-        </div>
-
-        <div>
-          <small style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px;">Recommended Hashtags</small>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            ${(bm.recommendedHashtags || []).map(h => `<span style="background:#f1f5f9;color:#334155;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:12px;cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(h)}');toast('Copied ${esc(h)}');">${esc(h)}</span>`).join('')}
-            <button type="button" style="border:none;background:none;color:#2563eb;font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;" onclick="navigator.clipboard.writeText('${(bm.recommendedHashtags || []).join(' ')}');toast('All hashtags copied!');">Copy All</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- CALENDAR CONTROLS & FILTER -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <h3 style="font-size:18px;color:#0f172a;margin:0;font-weight:800;">30-Day Content Plan</h3>
-          <span style="background:#e0f2fe;color:#0284c7;font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;">${filteredCal.length} Posts</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:12px;color:#64748b;font-weight:600;">Platform:</span>
-          <select style="border:1.5px solid #cbd5e1;border-radius:8px;padding:4px 10px;font-size:12px;background:#fff;" onchange="brandPlatformFilter=this.value;render();">
-            <option value="All" ${brandPlatformFilter==='All'?'selected':''}>All Platforms</option>
-            <option value="instagram" ${brandPlatformFilter==='instagram'?'selected':''}>Instagram</option>
-            <option value="facebook" ${brandPlatformFilter==='facebook'?'selected':''}>Facebook</option>
-            <option value="threads" ${brandPlatformFilter==='threads'?'selected':''}>Threads</option>
-            <option value="youtube" ${brandPlatformFilter==='youtube'?'selected':''}>YouTube</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 30-DAY CARDS GRID -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:16px;">
-        ${filteredCal.map(item => {
-          const platColor = item.recommendedPlatform === 'instagram' ? '#ec4899' : item.recommendedPlatform === 'facebook' ? '#2563eb' : item.recommendedPlatform === 'youtube' ? '#ef4444' : '#0284c7';
-          const platLabel = item.recommendedPlatform ? item.recommendedPlatform.toUpperCase() : 'SOCIAL';
-          return `
-            <div class="master-card" style="display:flex;flex-direction:column;justify-content:space-between;padding:18px;border-top:3px solid ${platColor};">
-              <div>
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                  <span style="font-size:12px;font-weight:800;color:#0f172a;">Day ${item.day}</span>
-                  <span style="background:${platColor}15;color:${platColor};font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">
-                    ${platLabel} · ${esc(item.bestTime || '10:00 AM')}
-                  </span>
-                </div>
-                <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:8px;text-transform:uppercase;">
-                  📌 ${esc(item.pillar || 'Content Pillar')}
-                </div>
-                <div style="font-size:13.5px;font-weight:700;color:#0f172a;margin-bottom:8px;line-height:1.4;">
-                  ${esc(item.hook || '')}
-                </div>
-                <div style="font-size:12.5px;color:#334155;background:#f8fafc;padding:10px 12px;border-radius:8px;line-height:1.5;max-height:120px;overflow-y:auto;white-space:pre-wrap;margin-bottom:12px;">
-                  ${esc(item.caption || '')}
-                </div>
-                ${item.mediaPrompt ? `
-                  <div style="font-size:11px;color:#64748b;background:#f1f5f9;padding:8px 10px;border-radius:6px;margin-bottom:14px;cursor:pointer;" onclick="copyMediaPrompt(${item.day - 1})" title="Click to copy visual prompt">
-                    🎨 <b>AI Visual Prompt:</b> ${esc(item.mediaPrompt)} <span style="color:#2563eb;text-decoration:underline;margin-left:4px;">(Copy)</span>
-                  </div>
-                ` : ''}
-              </div>
-
-              <div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #f1f5f9;padding-top:12px;">
-                <button type="button" class="btn-primary-blue" style="flex:1;font-size:12px;padding:6px 10px;font-weight:700;" onclick="scheduleCalendarDay(${item.day - 1})">
-                  🚀 Schedule Post
-                </button>
-                <button type="button" class="btn-soft-outline" style="font-size:12px;padding:6px 10px;" onclick="copyCalendarCaption(${item.day - 1})">
-                  📋 Copy
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  return heading(titleHtml, 'Instant AI website brand audits, strategic pillars, and automated 30-day content calendar generation for DevPatternLabs clients.', auditHeaderActions, '') + tabsHtml + auditContent;
 }
 function aiResult(){return `<div class="card"><div class="row between"><h2>Your starting point</h2><span class="badge">AI suggestion</span></div><p class="ai-result spacer">${esc(aiOutput)}</p><div class="row"><button class="primary" onclick="useAI()">Use in create post</button><button onclick="copyAI()">Copy caption</button></div></div>`}
 function generateAI(){let prompt=$('#aiPrompt').value.trim();if(!prompt)return toast('Tell me what your post is about.');let s=db.settings;let intro=s.tone==='Professional'?'A thoughtful next step for your business.':s.tone==='Playful'?'Big ideas. Fresh energy. Let’s go!':s.tone==='Luxury & refined'?'Considered details. Lasting impressions.':s.tone==='Warm & helpful'?'A little support can make a big difference.':'Your next great idea deserves to be seen.';aiOutput=`${intro}\n\n${prompt.replace(/[.!?]$/,'')}.\n\nAt ${s.name}, we bring ${s.services.toLowerCase()} to ${s.audience.toLowerCase()}. Let’s create something that reflects what makes your business yours.\n\nSend us a message to start the conversation.\n\n#${s.name.replace(/[^a-zA-Z0-9]/g,'')} #SmallBusiness #BrandGrowth`;commit(()=>db.ai.unshift({prompt,output:aiOutput}));render()}
@@ -14953,17 +14753,9 @@ function analytics(){
   const curMonthName = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   
   const headerActions = `
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <button type="button" class="btn-soft-outline" style="font-size:12.5px;" onclick="syncAnalyticsMetrics()">
-        🔄 Sync Metrics
-      </button>
-      <button type="button" class="btn-soft-outline" style="font-size:12.5px;" onclick="exportAnalytics()">
-        📥 Export CSV
-      </button>
-      <button type="button" class="btn-primary-blue" style="font-size:12.5px;" onclick="printClientReport()">
-        🖨️ Client Report
-      </button>
-    </div>
+    <button type="button" class="btn-soft-outline" style="font-size:12.5px;" onclick="toast('Date range: ${curMonthName}')">
+      📅 ${curMonthName} ▾
+    </button>
   `;
 
   return heading('Analytics', 'Track performance, understand your audience, and grow your social media.', headerActions, '') + `
@@ -15146,220 +14938,8 @@ function analytics(){
         `}
       </div>
     </div>
-
-    <!-- SHORTLINKS & CTA CLICK TRACKER -->
-    <div class="master-card" style="margin-top:20px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <h3 class="master-card-title" style="margin:0;">🔗 Shortlinks & CTA Click Tracker</h3>
-          <small style="color:#64748b;font-size:12px;">Track link clicks across your posts, captions, bio links, and client promotions (/l/:code).</small>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-        <input type="url" id="shortlinkOriginalUrl" placeholder="Enter target URL to shorten (e.g. https://devpatternlabs.com/services)" style="flex:1;min-width:240px;padding:10px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:13px;" onkeydown="if(event.key==='Enter'){createTrackedShortlink();}">
-        <button type="button" class="btn-primary-blue" style="padding:10px 20px;font-size:13px;font-weight:700;" onclick="createTrackedShortlink()">
-          + Generate Shortlink
-        </button>
-      </div>
-
-      <div class="shortlinks-list">
-        ${(db.shortlinks && db.shortlinks.length > 0) ? `
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-              <thead>
-                <tr style="border-bottom:1.5px solid #e2e8f0;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">
-                  <th style="padding:8px 10px;">Tracked Link</th>
-                  <th style="padding:8px 10px;">Destination</th>
-                  <th style="padding:8px 10px;text-align:center;">Clicks</th>
-                  <th style="padding:8px 10px;text-align:right;">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${db.shortlinks.map(l => {
-                  const shortHref = window.location.origin + '/l/' + l.code;
-                  return `
-                    <tr style="border-bottom:1px solid #f1f5f9;">
-                      <td style="padding:10px;font-weight:700;color:#2563eb;">
-                        <a href="/l/${esc(l.code)}" target="_blank" style="color:#2563eb;text-decoration:none;">/l/${esc(l.code)}</a>
-                      </td>
-                      <td style="padding:10px;color:#475569;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${esc(l.original_url || l.originalUrl)}
-                      </td>
-                      <td style="padding:10px;text-align:center;font-weight:800;color:#0f172a;">
-                        ${Number(l.clicks) || 0}
-                      </td>
-                      <td style="padding:10px;text-align:right;">
-                        <button type="button" class="btn-soft-outline" style="font-size:11px;padding:3px 8px;" onclick="navigator.clipboard.writeText('${shortHref}');toast('Link copied: ${shortHref}');">
-                          📋 Copy
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : `
-          <div style="padding:20px;text-align:center;color:#94a3b8;font-size:12.5px;">
-            No tracked shortlinks created yet. Create one above to track traffic from your social captions!
-          </div>
-        `}
-      </div>
-    </div>
   `;
 }
-
-async function createTrackedShortlink() {
-  const urlInput = document.getElementById('shortlinkOriginalUrl');
-  const originalUrl = (urlInput ? urlInput.value : '').trim();
-  if (!originalUrl) {
-    return toast('Please enter a destination URL to track (e.g. https://devpatternlabs.com)');
-  }
-  try {
-    toast('Generating tracked shortlink...');
-    const res = await fetch('/api/social/link', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ originalUrl })
-    });
-    const data = await res.json();
-    if (data.success && data.link) {
-      if (!Array.isArray(db.shortlinks)) db.shortlinks = [];
-      db.shortlinks.unshift(data.link);
-      commit(() => {});
-      toast(`✅ Tracked link created: /l/${data.link.code}`);
-      if (urlInput) urlInput.value = '';
-      render();
-    } else {
-      toast('Failed to create link: ' + (data.message || 'unknown error'));
-    }
-  } catch (e) {
-    toast('Error creating shortlink: ' + e.message);
-  }
-}
-
-async function syncAnalyticsMetrics() {
-  toast('🔄 Syncing live views, reach, and engagements from connected platforms...');
-  try {
-    const res = await fetch('/api/social/analytics?sync=true', { method: 'POST' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.overview) {
-        toast('✅ Analytics metrics synchronized!');
-        render();
-        return;
-      }
-    }
-  } catch (e) {}
-  toast('Metrics synced from local publishing activity.');
-  render();
-}
-
-function printClientReport() {
-  const userPosts = getUserPosts(db.posts);
-  const publishedPosts = userPosts.filter(p => p.status === 'Published');
-  let totalReach = 0, totalLikes = 0, totalClicks = 0;
-  publishedPosts.forEach(p => {
-    totalReach += (p.metrics?.reach || p.reach || p.views || 0);
-    totalLikes += (p.metrics?.likes || 0);
-    totalClicks += (p.metrics?.clicks || 0);
-  });
-  if (Array.isArray(db.shortlinks)) {
-    db.shortlinks.forEach(l => { totalClicks += (Number(l.clicks) || 0); });
-  }
-
-  const reportWin = window.open('', '_blank');
-  if (!reportWin) return toast('Please allow popups to generate Client PDF Report.');
-
-  reportWin.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Social Media Performance Report — DevPatternLabs</title>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; }
-        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 28px; }
-        .logo { font-size: 22px; font-weight: 800; color: #2563eb; }
-        .meta { color: #64748b; font-size: 13px; text-align: right; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 30px; }
-        .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 12px; }
-        .card-val { font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 6px; }
-        .card-lbl { font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748b; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
-        th { text-align: left; padding: 10px; border-bottom: 2px solid #cbd5e1; color: #475569; font-size: 11px; text-transform: uppercase; }
-        td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; }
-        .badge { background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-        @media print {
-          .no-print { display: none; }
-          body { padding: 0; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-        <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;">🖨️ Print / Save as PDF</button>
-      </div>
-      <div class="header">
-        <div>
-          <div class="logo">DevPatternLabs</div>
-          <div style="font-size:14px;color:#475569;margin-top:4px;">Social Media Growth & Analytics Report</div>
-        </div>
-        <div class="meta">
-          <div>Report Generated: <b>${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</b></div>
-          <div>Audited Channels: Instagram, Facebook, YouTube</div>
-        </div>
-      </div>
-
-      <div class="grid">
-        <div class="card">
-          <div class="card-lbl">Total Reach & Impressions</div>
-          <div class="card-val">${totalReach.toLocaleString()}</div>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Total Engagements</div>
-          <div class="card-val">${totalLikes.toLocaleString()}</div>
-        </div>
-        <div class="card">
-          <div class="card-lbl">CTA Link Clicks</div>
-          <div class="card-val">${totalClicks.toLocaleString()}</div>
-        </div>
-      </div>
-
-      <h3 style="margin-top:30px;font-size:16px;">Top Performing Published Content</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Content Hook</th>
-            <th>Platform</th>
-            <th>Published Date</th>
-            <th style="text-align:right;">Reach</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${publishedPosts.length > 0 ? publishedPosts.slice(0, 8).map(p => `
-            <tr>
-              <td><b>${(p.title || p.caption || 'Untitled').slice(0, 45)}</b></td>
-              <td><span class="badge">${(p.platforms && p.platforms[0]) || p.platform || 'Social'}</span></td>
-              <td>${(p.date || p.createdAt || '').slice(0, 10)}</td>
-              <td style="text-align:right;font-weight:700;">${p.metrics?.reach || p.reach || p.views || 0}</td>
-            </tr>
-          `).join('') : `
-            <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">No published posts recorded yet.</td></tr>
-          `}
-        </tbody>
-      </table>
-
-      <div style="margin-top:40px;border-top:1px solid #e2e8f0;padding-top:14px;color:#94a3b8;font-size:11px;display:flex;justify-content:space-between;">
-        <span>Powered by PostSprint · DevPatternLabs Official Studio</span>
-        <span>Confidential Client Deliverable</span>
-      </div>
-    </body>
-    </html>
-  `);
-  reportWin.document.close();
-}
-
 function exportAnalytics(){const userPosts = getUserPosts(db.posts);let rows=[['Title','Platforms','Published at','Reach','Engagements','Clicks'],...userPosts.filter(p=>p.status==='Published'&&new Date(p.date)>=new Date(Date.now()-analyticsDays*86400000)).map(p=>[p.title,p.platforms.join(' / '),p.date,p.metrics?.reach||0,p.metrics?.likes||0,p.metrics?.clicks||0])];let csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/^[=+@-]/,"'").replace(/"/g,'""')+'"').join(',')).join('\n');let a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.href=url;a.download='postsprint-analytics.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Analytics CSV downloaded.')}
 
 // =========================================================================
@@ -16048,7 +15628,7 @@ function checkOAuthRedirectResult(){
       name: name,
       email: userEmail,
       avatarUrl: userAvatar,
-      role: (userEmail.trim().toLowerCase() === 'devpatternlabs@gmail.com') ? 'admin' : 'user',
+      role: (userEmail.trim().toLowerCase() === 'explorewithharizz@gmail.com') ? 'admin' : 'user',
       sessionToken: oauthToken || ''
     };
     saveCurrentUserToStorage(currentUser);
@@ -16268,7 +15848,7 @@ window.addEventListener('hashchange', () => {
     return;
   }
 
-  // Admin access guard: Only devpatternlabs@gmail.com can access #admin
+  // Admin access guard: Only explorewithharizz@gmail.com can access #admin
   // Any other user or guest pasting or navigating to #admin must strictly see the official main page only
   if (target === 'admin' && !isCurrentUserAdmin()) {
     page = 'home';
@@ -17106,7 +16686,7 @@ async function loadAdminTab(tabId, force = false) {
           <div style="display:flex;flex-direction:column;gap:16px;">
             <div>
               <label style="font-size:12px;font-weight:700;color:#475569;">Primary Super-Admin Email</label>
-              <input type="text" value="${esc(s.adminEmail || 'devpatternlabs@gmail.com')}" readonly style="background:#f1f5f9;width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:10px;">
+              <input type="text" value="${esc(s.adminEmail || 'explorewithharizz@gmail.com')}" readonly style="background:#f1f5f9;width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:10px;">
             </div>
             <div>
               <label style="font-size:12px;font-weight:700;color:#475569;">Free Plan Monthly Upload Limit</label>
@@ -17231,7 +16811,7 @@ function renderUsersTableRows(users) {
               ${u.status==='suspended'?'Unsuspend':'Suspend'}
             </button>
             <button class="small danger" onclick="adminDisconnectAccounts('${esc(u.id)}')" title="Disconnect Social Accounts" style="padding:4px 8px;font-size:11px;">Disconnect</button>
-            ${u.email !== 'devpatternlabs@gmail.com' ? `<button class="small danger" onclick="adminDeleteUser('${esc(u.id)}', '${esc(u.email)}')" title="Delete User" style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border-color:#fca5a5;">Delete</button>` : ''}
+            ${u.email !== 'explorewithharizz@gmail.com' ? `<button class="small danger" onclick="adminDeleteUser('${esc(u.id)}', '${esc(u.email)}')" title="Delete User" style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#dc2626;border-color:#fca5a5;">Delete</button>` : ''}
           </div>
         </td>
       </tr>

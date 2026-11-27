@@ -32,9 +32,9 @@ loadEnvFile(path.join(BASE_DIR, '.env.local'));
 loadEnvFile(path.join(BASE_DIR, 'social-accounts.env'), true);
 loadEnvFile(path.join(BASE_DIR, 'auto', '.env.local'));
 
-// Supabase cloud credentials
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// Supabase cloud credentials configured from the auto project
+process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://oadiscrojgfsszedilwp.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_secret_AqS4ubt9D67Mo8EwoyN8ww_Civu7lCn';
 process.env.SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'social-videos';
 
 const { encryptToken, decryptToken, generateOAuthState, verifyOAuthState, parseOAuthState } = require('./lib/crypto');
@@ -53,8 +53,6 @@ const couponsHandler = require('./api/coupons');
 const adminHandler = require('./api/admin');
 const contactHandler = require('./api/contact');
 const siteHandler = require('./api/site');
-const socialHandler = require('./api/social');
-const chatHandler = require('./api/chat');
 
 const PORT = String(process.env.PORT || 3000).trim();
 
@@ -217,38 +215,6 @@ const server = http.createServer(async (req, res) => {
   // Public Site & Announcements API
   if (reqPath.startsWith('/api/site')) {
     adaptVercelHandler(siteHandler)(req, res);
-    return;
-  }
-
-  // AI Chat, Brand Audit & Calendar Generation
-  if (reqPath.startsWith('/api/chat')) {
-    adaptVercelHandler(chatHandler)(req, res);
-    return;
-  }
-
-  // Unified Social Gateway, Analytics & Shortlinks
-  if (reqPath === '/api/social' || reqPath.startsWith('/api/social/link') || reqPath.startsWith('/api/social/analytics') || reqPath.startsWith('/api/social/music') || reqPath.startsWith('/api/social/health')) {
-    adaptVercelHandler(socialHandler)(req, res);
-    return;
-  }
-
-  // Shortlink click tracker & redirect
-  if (req.method === 'GET' && reqPath.startsWith('/l/')) {
-    const code = reqPath.replace(/^\/l\//, '').trim();
-    const shortlink = await db.getShortlink(code);
-    if (shortlink && shortlink.original_url) {
-      const meta = {
-        ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '',
-        userAgent: req.headers['user-agent'] || '',
-        referer: req.headers['referer'] || ''
-      };
-      await db.recordShortlinkClick(code, meta).catch(() => {});
-      res.writeHead(302, { Location: shortlink.original_url });
-      res.end();
-      return;
-    }
-    res.writeHead(302, { Location: '/' });
-    res.end();
     return;
   }
 
@@ -1854,20 +1820,20 @@ const server = http.createServer(async (req, res) => {
     const statusData = {
       mockMode: isMock,
       google: {
-        hasClientId: Boolean(process.env.GOOGLE_CLIENT_ID),
-        hasClientSecret: Boolean(process.env.GOOGLE_CLIENT_SECRET),
-        clientId: process.env.GOOGLE_CLIENT_ID || '',
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET ? '••••••••' : '',
+        hasClientId: true,
+        hasClientSecret: true,
+        clientId: process.env.GOOGLE_CLIENT_ID || '238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com',
+        clientSecret: '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',
         redirectUri: process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/auth/youtube/callback`
       },
       meta: {
-        hasAppId: Boolean(process.env.META_APP_ID),
-        hasAppSecret: Boolean(process.env.META_APP_SECRET),
-        appId: process.env.META_APP_ID || '',
-        appSecret: process.env.META_APP_SECRET || '',
+        hasAppId: true,
+        hasAppSecret: true,
+        appId: process.env.META_APP_ID || '2680197525765699',
+        appSecret: process.env.META_APP_SECRET || '0764e538332d0eeb68deb98df70634d1',
         redirectUri: process.env.META_REDIRECT_URI || `http://localhost:${PORT}/api/oauth/meta/callback`,
         localRedirectUri: `http://localhost:${PORT}/api/oauth/meta/callback`,
-        prodRedirectUri: (process.env.APP_URL || 'https://postsprint.devpatternlabs.com') + '/api/oauth/meta/callback',
+        prodRedirectUri: 'https://postmint-studio.vercel.app/api/oauth/meta/callback',
         facebookPageId: process.env.FACEBOOK_PAGE_ID || '',
         facebookPageAccessToken: process.env.FACEBOOK_PAGE_ACCESS_TOKEN || '',
         instagramAccountId: process.env.INSTAGRAM_ACCOUNT_ID || '',
@@ -1907,15 +1873,15 @@ const server = http.createServer(async (req, res) => {
           `# Generated on: ${new Date().toISOString()}`,
           `SOCIAL_API_MOCK_MODE=${payload.socialMockMode !== undefined ? payload.socialMockMode : false}`,
           `NEXT_PUBLIC_SOCIAL_API_MOCK_MODE=${payload.socialMockMode !== undefined ? payload.socialMockMode : false}`,
-          `META_APP_ID=${payload.metaAppId || process.env.META_APP_ID || ''}`,
-          `META_APP_SECRET=${payload.metaAppSecret || process.env.META_APP_SECRET || ''}`,
+          `META_APP_ID=${payload.metaAppId || '2680197525765699'}`,
+          `META_APP_SECRET=${payload.metaAppSecret || '0764e538332d0eeb68deb98df70634d1'}`,
           `META_REDIRECT_URI=${payload.metaRedirectUri || `http://localhost:${PORT}/api/oauth/meta/callback`}`,
           `FACEBOOK_PAGE_ID=${payload.facebookPageId || ''}`,
           `FACEBOOK_PAGE_ACCESS_TOKEN=${payload.facebookPageAccessToken || ''}`,
           `INSTAGRAM_ACCOUNT_ID=${payload.instagramAccountId || ''}`,
           `INSTAGRAM_ACCESS_TOKEN=${payload.instagramAccessToken || ''}`,
-          `GOOGLE_CLIENT_ID=${payload.googleClientId || process.env.GOOGLE_CLIENT_ID || ''}`,
-          `GOOGLE_CLIENT_SECRET=${payload.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET || ''}`,
+          `GOOGLE_CLIENT_ID=${payload.googleClientId || '238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com'}`,
+          `GOOGLE_CLIENT_SECRET=${payload.googleClientSecret || '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'}`,
           `GOOGLE_REDIRECT_URI=${payload.googleRedirectUri || `http://localhost:${PORT}/api/auth/youtube/callback`}`,
           `SNAPCHAT_CLIENT_ID=${payload.snapchatClientId || ''}`,
           `SHARECHAT_PARTNER_API_TOKEN=${payload.sharechatPartnerToken || ''}`,
@@ -2025,7 +1991,7 @@ const server = http.createServer(async (req, res) => {
             },
             youtube: {
               platformName: "YouTube Data API v3",
-              clientId: payload.googleClientId || process.env.GOOGLE_CLIENT_ID || "",
+              clientId: payload.googleClientId || "238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com",
               clientSecretConfigured: true,
               redirectUri: payload.googleRedirectUri || `http://localhost:${PORT}/api/auth/youtube/callback`
             },
@@ -2138,7 +2104,7 @@ const server = http.createServer(async (req, res) => {
         const data = JSON.parse(body || '{}');
         const userMessages = data.messages || [];
         const modelPreference = data.model || 'gemini';
-        const apiKey = process.env.GEMINI_API_KEY || '';
+        const apiKey = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6Kq3WAOZOLs_Y369SZu23llvshsxrEjkEWx5aiBYqZhuw';
         
         const systemPromptText = `You are a natural, friendly AI assistant inside a website.
 

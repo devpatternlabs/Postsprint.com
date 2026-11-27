@@ -179,9 +179,8 @@ async function handler(req, res) {
           // Attempt fallback lookup for default Page
           let fallbackPageFound = false;
           try {
-            const defaultPageId = process.env.FACEBOOK_PAGE_ID || '';
-            if (defaultPageId) {
-              const pRes = await fetch(`https://graph.facebook.com/v21.0/${defaultPageId}?fields=id,name,access_token,instagram_business_account{id,username,name}&access_token=${encodeURIComponent(userAccessToken)}`);
+            const defaultPageId = process.env.FACEBOOK_PAGE_ID || '1399357519919142';
+            const pRes = await fetch(`https://graph.facebook.com/v21.0/${defaultPageId}?fields=id,name,access_token,instagram_business_account{id,username,name}&access_token=${encodeURIComponent(userAccessToken)}`);
             if (pRes.ok) {
               const pData = await pRes.json();
               if (pData.id && pData.name) {
@@ -269,10 +268,7 @@ async function handler(req, res) {
   }
 
   // 2. Meta OAuth Start Handler
-  const appId = process.env.META_APP_ID || '';
-  if (!appId) {
-    return res.redirect(302, `/?page=accounts&error=${encodeURIComponent('Meta App ID is not configured. Please set META_APP_ID in your environment settings.')}#accounts`);
-  }
+  const appId = process.env.META_APP_ID || '2680197525765699';
   const scopes = (req.query && req.query.scope) || 'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish';
   const user = await getAuthenticatedUser(req);
   const stateUserId = user ? user.id : (req.query && req.query.userId ? req.query.userId : 'usr_default_postmint');

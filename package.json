@@ -1,7 +1,7 @@
 {
-  "name": "postsprint",
-  "version": "2.0.0",
-  "description": "PostSprint Unified Social Media Studio",
+  "name": "postmint",
+  "version": "1.0.0",
+  "description": "Postmint Social Studio",
   "scripts": {
     "start": "node server.js",
     "config:social": "node auto-configure-social.js",

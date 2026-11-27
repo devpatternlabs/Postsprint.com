@@ -4,8 +4,8 @@
 
 const db = require('../lib/db');
 
-const META_APP_ID = (process.env.META_APP_ID || '').trim();
-const META_APP_SECRET = (process.env.META_APP_SECRET || '').trim();
+const META_APP_ID = (process.env.META_APP_ID || '').trim() || '2680197525765699';
+const META_APP_SECRET = (process.env.META_APP_SECRET || '').trim() || '0764e538332d0eeb68deb98df70634d1';
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
 const GRAPH_VIDEO_BASE = `https://graph-video.facebook.com/${META_GRAPH_VERSION}`;
@@ -348,23 +348,83 @@ async function publishFacebookPhoto({
   pageId,
   pageAccessToken,
   imageUrl,
+  imageBuffer = null,
   message = ''
 }) {
   console.log(`[Facebook Service] Publishing photo to Facebook Page ${pageId}...`);
-  const photoUrl = new URL(`${META_GRAPH_BASE}/${pageId}/photos`);
-  photoUrl.searchParams.set('url', imageUrl);
-  if (message) photoUrl.searchParams.set('caption', message);
-  photoUrl.searchParams.set('published', 'true');
-  photoUrl.searchParams.set('access_token', pageAccessToken);
 
-  const res = await fetch(photoUrl.toString(), { method: 'POST' });
-  const data = await res.json();
+  let targetPostId = null;
 
-  if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `HTTP ${res.status} uploading photo to Facebook`);
+  // 1. Try URL ingest if public HTTPS URL is provided
+  if (imageUrl && imageUrl.startsWith('http')) {
+    try {
+      const photoUrl = new URL(`${META_GRAPH_BASE}/${pageId}/photos`);
+      photoUrl.searchParams.set('url', imageUrl);
+      if (message) photoUrl.searchParams.set('caption', message);
+      photoUrl.searchParams.set('published', 'true');
+      photoUrl.searchParams.set('access_token', pageAccessToken);
+
+      const res = await fetch(photoUrl.toString(), { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && (data.post_id || data.id)) {
+        targetPostId = data.post_id || data.id;
+        console.log(`[Facebook Service] Direct photo URL ingest accepted! Photo ID: ${targetPostId}`);
+      } else {
+        console.warn('[Facebook Service] Photo URL ingest note:', data.error?.message || `HTTP ${res.status}`);
+      }
+    } catch (urlErr) {
+      console.warn('[Facebook Service] Photo URL ingest exception:', urlErr.message);
+    }
   }
 
-  const targetPostId = data.post_id || data.id;
+  // 2. Binary multipart fallback if URL ingest failed or was omitted
+  if (!targetPostId) {
+    let buf = imageBuffer;
+    if (!buf && imageUrl && imageUrl.startsWith('http')) {
+      try {
+        console.log('[Facebook Service] Downloading photo bytes for direct multipart upload to Facebook...');
+        const dlRes = await fetch(imageUrl);
+        if (dlRes.ok) {
+          const ab = await dlRes.arrayBuffer();
+          buf = Buffer.from(ab);
+        }
+      } catch (dlErr) {
+        console.warn('[Facebook Service] Could not download photo from URL:', dlErr.message);
+      }
+    }
+
+    if (buf && Buffer.isBuffer(buf) && buf.length > 0) {
+      console.log(`[Facebook Service] Uploading ${buf.length} photo bytes via multipart to Facebook Graph API...`);
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(buf)], { type: 'image/jpeg' });
+      formData.append('source', blob, 'photo.jpg');
+      formData.append('published', 'true');
+      if (message) formData.append('caption', message);
+      formData.append('access_token', pageAccessToken);
+
+      const res = await fetch(`${META_GRAPH_BASE}/${pageId}/photos`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      if (res.ok && (data.post_id || data.id)) {
+        targetPostId = data.post_id || data.id;
+        console.log(`[Facebook Service] Multipart photo upload accepted! Photo ID: ${targetPostId}`);
+      } else {
+        const errMsg = data.error?.message || `HTTP ${res.status} uploading photo multipart to Facebook`;
+        if (data.error?.code === 190) {
+          throw new Error('Facebook session has expired. Please re-authorize by connecting your Facebook account.');
+        }
+        throw new Error(errMsg);
+      }
+    }
+  }
+
+  if (!targetPostId) {
+    throw new Error('Facebook photo upload failed: neither public URL ingest nor binary multipart upload succeeded.');
+  }
+
   let finalPhotoUrl = `https://www.facebook.com/${targetPostId}`;
 
   try {

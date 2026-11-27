@@ -391,7 +391,7 @@ async function handler(req, res) {
     const user = await getAuthenticatedUser(req);
     const userId = user ? user.id : (req.query && req.query.userId ? req.query.userId : '');
     const redirectUri = resolveGoogleRedirectUri(req, '/api/auth/youtube/callback');
-    const clientId = process.env.GOOGLE_CLIENT_ID || '';
+    const clientId = process.env.GOOGLE_CLIENT_ID || '238574236888-3pek0n3365bt5un90at755luqqh44pau.apps.googleusercontent.com';
     const scopes = 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube';
     const state = userId ? `yt_${userId}` : 'youtube_postmint';
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=consent%20select_account&include_granted_scopes=true&state=${encodeURIComponent(state)}`;
