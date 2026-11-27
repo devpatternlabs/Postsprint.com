@@ -162,7 +162,7 @@ async function handler(req, res) {
     // 0. POST /api/social/signed-upload-url - Direct Browser-to-Supabase Upload (Bypasses Vercel 4.5MB limit)
     // -------------------------------------------------------------
     if ((subpath === 'signed-upload-url' || subpath === 'signed_upload_url') && req.method === 'POST') {
-      const authUser = await getAuthenticatedUser(req);
+      const authUser = await getAuthenticatedUser(req, payload);
       const activeUserId = (authUser && authUser.role === 'admin' && payload.userId)
         ? payload.userId
         : (authUser ? authUser.id : (payload.userId || 'usr_default_postmint'));

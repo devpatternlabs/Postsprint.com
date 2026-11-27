@@ -3594,7 +3594,8 @@ try {
 
 function isCurrentUserAdmin(user = currentUser) {
   if (!user || !user.email) return false;
-  return user.email.trim().toLowerCase() === 'explorewithharizz@gmail.com';
+  const em = user.email.trim().toLowerCase();
+  return em === 'explorewithharizz@gmail.com' || em === 'devpatternlabs@gmail.com';
 }
 
 function saveCurrentUserToStorage(user) {
@@ -10184,14 +10185,18 @@ async function uploadBinaryDirectToSupabase(file, onProgress, mimeType) {
   if (!file) return null;
   const targetMime = mimeType || file.type || 'video/mp4';
   try {
-    const token = localStorage.getItem('postmint_token') || currentUser?.sessionToken || '';
+    const curUser = currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || JSON.parse(localStorage.getItem('postmint_user') || 'null');
+    const token = localStorage.getItem('postmint_token') || curUser?.sessionToken || '';
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (curUser?.id) headers['X-User-Id'] = curUser.id;
+    if (curUser?.email) headers['X-User-Email'] = curUser.email;
     const uploadPayload = {
       filename: file.name,
       mimeType: targetMime,
       folder: 'posts',
-      userId: currentUser?.id || 'usr_default_postmint'
+      userId: curUser?.id || 'usr_default_postmint',
+      userEmail: curUser?.email || 'explorewithharizz@gmail.com'
     };
 
     let signRes = await fetch('/api/social/signed-upload-url', {
@@ -11259,17 +11264,23 @@ async function savePost(status){
                 reader.readAsDataURL(rawFile);
               });
               if (base64Data) {
-                const upToken = localStorage.getItem('postmint_token') || currentUser?.sessionToken || '';
+                const curRelayUser = currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || JSON.parse(localStorage.getItem('postmint_user') || 'null');
+                const upToken = localStorage.getItem('postmint_token') || curRelayUser?.sessionToken || '';
                 const upHeaders = { 'Content-Type': 'application/json' };
                 if (upToken) upHeaders['Authorization'] = `Bearer ${upToken}`;
+                if (curRelayUser?.id) upHeaders['X-User-Id'] = curRelayUser.id;
+                if (curRelayUser?.email) upHeaders['X-User-Email'] = curRelayUser.email;
                 const upRes = await fetch('/api/social/upload', {
                   method: 'POST',
                   headers: upHeaders,
+                  credentials: 'include',
                   body: JSON.stringify({
                     filename: rawFile.name || 'media.mp4',
                     mimeType: rawFile.type || 'video/mp4',
                     fileBase64: base64Data,
-                    folder: 'posts'
+                    folder: 'posts',
+                    userId: curRelayUser?.id || 'usr_default_postmint',
+                    userEmail: curRelayUser?.email || 'explorewithharizz@gmail.com'
                   })
                 });
                 if (upRes.ok) {
@@ -11338,8 +11349,8 @@ async function savePost(status){
         const pubToken = localStorage.getItem('postmint_token') || curUser?.sessionToken || '';
         const pubHeaders = { 'Content-Type': 'application/json' };
         if (pubToken) pubHeaders['Authorization'] = `Bearer ${pubToken}`;
-        if (curUser?.id) pubHeaders['X-User-Id'] = curUser.id;
-        if (curUser?.email) pubHeaders['X-User-Email'] = curUser.email;
+        pubHeaders['X-User-Id'] = curUser?.id || 'usr_default_postmint';
+        pubHeaders['X-User-Email'] = curUser?.email || 'explorewithharizz@gmail.com';
 
         const curMedia = asset(c.mediaId);
         const isVideoMedia = Boolean(
@@ -11368,8 +11379,8 @@ async function savePost(status){
           credentials: 'include',
           body: JSON.stringify({
             postId: pId,
-            userId: curUser?.id || null,
-            userEmail: curUser?.email || null,
+            userId: curUser?.id || 'usr_default_postmint',
+            userEmail: curUser?.email || 'explorewithharizz@gmail.com',
             platforms: c.platforms,
             title: c.title || c.caption.slice(0, 60),
             caption: c.caption,
@@ -12762,14 +12773,23 @@ async function uploadFiles(files,forPost){
           });
 
           if(fileData){
+            const curUpUser = currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || JSON.parse(localStorage.getItem('postmint_user') || 'null');
+            const upToken = localStorage.getItem('postmint_token') || curUpUser?.sessionToken || '';
+            const upHeaders = { 'Content-Type': 'application/json' };
+            if (upToken) upHeaders['Authorization'] = `Bearer ${upToken}`;
+            upHeaders['X-User-Id'] = curUpUser?.id || 'usr_default_postmint';
+            upHeaders['X-User-Email'] = curUpUser?.email || 'explorewithharizz@gmail.com';
             const upRes=await fetch('/api/social/upload',{
               method:'POST',
-              headers:{'Content-Type':'application/json'},
+              headers:upHeaders,
+              credentials:'include',
               body:JSON.stringify({
                 filename:currentFile.name,
                 mimeType:currentMime,
                 fileBase64:fileData,
-                folder:forPost?(composer?.type==='Reels'?'reels':composer?.type==='Story'?'stories':'posts'):'library'
+                folder:forPost?(composer?.type==='Reels'?'reels':composer?.type==='Story'?'stories':'posts'):'library',
+                userId: curUpUser?.id || 'usr_default_postmint',
+                userEmail: curUpUser?.email || 'explorewithharizz@gmail.com'
               })
             });
 
@@ -15639,7 +15659,7 @@ function checkOAuthRedirectResult(){
       name: name,
       email: userEmail,
       avatarUrl: userAvatar,
-      role: (userEmail.trim().toLowerCase() === 'explorewithharizz@gmail.com') ? 'admin' : 'user',
+      role: (['explorewithharizz@gmail.com', 'devpatternlabs@gmail.com'].includes(userEmail.trim().toLowerCase())) ? 'admin' : 'user',
       sessionToken: oauthToken || ''
     };
     saveCurrentUserToStorage(currentUser);
